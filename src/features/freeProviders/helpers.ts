@@ -1,10 +1,11 @@
 import type { ApiCallResult } from '@/services/api/apiCall';
-import type { ModelAlias, OpenAIProviderConfig } from '@/types';
+import type { ModelAlias, OAuthModelAliasEntry, OpenAIProviderConfig } from '@/types';
 import { generateId } from '@/utils/helpers';
 import { normalizeModelList } from '@/utils/models';
 import type {
   FreeProviderHealth,
   FreeProviderKeyEntry,
+  FreeProviderModelAlias,
   FreeProviderQuotaStats,
   FreeProviderResolvedItem,
   FreeProviderRoutingRecommendation,
@@ -14,6 +15,8 @@ import type {
   FreeProviderTestResult,
 } from '@/types/freeProvider';
 import type { FreeProviderCatalogEntry } from '@/generated/freeProviderCatalog';
+
+const normalizeProviderKey = (value: string) => String(value ?? '').trim().toLowerCase();
 
 export const createEmptyQuotaStats = (): FreeProviderQuotaStats => ({
   requests: 0,
@@ -100,24 +103,210 @@ export const getResolvedProviderHealth = (
 };
 
 export const buildOpenAIProvidersFromFreeProviders = (
-  providers: FreeProviderResolvedItem[]
+  providers: FreeProviderResolvedItem[],
+  modelAlias: FreeProviderModelAlias = {}
 ): OpenAIProviderConfig[] =>
   providers
     .filter((provider) => provider.importStrategy === 'openai-compatibility')
     .filter((provider) => provider.state.enabled)
     .filter((provider) => provider.state.keys.some((key) => key.enabled && key.apiKey.trim()))
-    .map((provider) => ({
-      name: provider.state.customName?.trim() || provider.name,
-      baseUrl: provider.state.baseUrl?.trim() || provider.openaiBaseUrl || '',
-      apiKeyEntries: provider.state.keys
-        .filter((key) => key.enabled && key.apiKey.trim())
-        .map((key) => ({ apiKey: key.apiKey.trim() })),
-      headers: provider.defaultHeaders,
-      models: provider.state.models,
-      priority: provider.state.priority,
-      testModel: provider.state.models[0]?.name,
-    }))
+    .map((provider) => {
+      const resolvedModels = applyModelAliasEntries(
+        provider.state.models,
+        getProviderModelAliasEntries(modelAlias, provider.id)
+      );
+
+      return {
+        name: provider.state.customName?.trim() || provider.name,
+        baseUrl: provider.state.baseUrl?.trim() || provider.openaiBaseUrl || '',
+        apiKeyEntries: provider.state.keys
+          .filter((key) => key.enabled && key.apiKey.trim())
+          .map((key) => ({ apiKey: key.apiKey.trim() })),
+        headers: provider.defaultHeaders,
+        models: resolvedModels,
+        priority: provider.state.priority,
+        testModel: resolvedModels[0]?.name,
+      };
+    })
     .filter((provider) => provider.baseUrl);
+
+export const normalizeFreeProviderModelAliasEntries = (
+  entries?: OAuthModelAliasEntry[]
+): OAuthModelAliasEntry[] => {
+  if (!Array.isArray(entries)) return [];
+
+  const seen = new Set<string>();
+  const normalized: OAuthModelAliasEntry[] = [];
+
+  entries.forEach((entry) => {
+    const name = String(entry?.name ?? '').trim();
+    const alias = String(entry?.alias ?? '').trim();
+    if (!name || !alias) return;
+
+    const key = `${name.toLowerCase()}::${alias.toLowerCase()}::${entry?.fork ? '1' : '0'}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    normalized.push(entry?.fork ? { name, alias, fork: true } : { name, alias });
+  });
+
+  return normalized;
+};
+
+export const getProviderModelAliasEntries = (
+  modelAlias: FreeProviderModelAlias,
+  providerId: string
+): OAuthModelAliasEntry[] => {
+  const targetKey = normalizeProviderKey(providerId);
+  const matchKey = Object.keys(modelAlias).find((key) => normalizeProviderKey(key) === targetKey);
+  return normalizeFreeProviderModelAliasEntries(matchKey ? modelAlias[matchKey] : []);
+};
+
+export const applyModelAliasEntries = (
+  models: ModelAlias[],
+  aliasEntries: OAuthModelAliasEntry[]
+): ModelAlias[] => {
+  const sourceModels = Array.isArray(models) ? models : [];
+  const normalizedAliases = normalizeFreeProviderModelAliasEntries(aliasEntries);
+  const aliasBySource = new Map<string, OAuthModelAliasEntry[]>();
+  const sourceByName = new Map<string, ModelAlias>();
+  const seen = new Set<string>();
+  const resolved: ModelAlias[] = [];
+
+  sourceModels.forEach((model) => {
+    const name = String(model?.name ?? '').trim();
+    if (!name) return;
+    sourceByName.set(name.toLowerCase(), { ...model, name });
+  });
+
+  normalizedAliases.forEach((entry) => {
+    const key = entry.name.trim().toLowerCase();
+    if (!aliasBySource.has(key)) {
+      aliasBySource.set(key, []);
+    }
+    aliasBySource.get(key)!.push(entry);
+  });
+
+  const pushModel = (model: ModelAlias) => {
+    const name = String(model.name ?? '').trim();
+    const alias = String(model.alias ?? '').trim();
+    const dedupeKey = `${name.toLowerCase()}::${alias.toLowerCase()}`;
+    if (!name || seen.has(dedupeKey)) return;
+    seen.add(dedupeKey);
+    resolved.push(alias ? { ...model, name, alias } : { ...model, name, alias: undefined });
+  };
+
+  sourceModels.forEach((model) => {
+    const name = String(model?.name ?? '').trim();
+    if (!name) return;
+
+    const matches = aliasBySource.get(name.toLowerCase()) ?? [];
+    if (!matches.length) {
+      pushModel({ ...model, name });
+      return;
+    }
+
+    matches.forEach((match) => {
+      pushModel({ ...model, name, alias: match.alias });
+    });
+  });
+
+  normalizedAliases.forEach((entry) => {
+    if (sourceByName.has(entry.name.toLowerCase())) return;
+    pushModel({ name: entry.name, alias: entry.alias });
+  });
+
+  return resolved;
+};
+
+export const buildModelAliasLookup = (modelAlias: FreeProviderModelAlias): Map<string, string> => {
+  const lookup = new Map<string, string>();
+  Object.values(modelAlias).forEach((entries) => {
+    normalizeFreeProviderModelAliasEntries(entries).forEach((entry) => {
+      lookup.set(entry.name.trim().toLowerCase(), entry.alias.trim());
+    });
+  });
+  return lookup;
+};
+
+export const resolveUsageModelAlias = (
+  modelName: string,
+  modelAlias: FreeProviderModelAlias
+): string => {
+  const trimmed = String(modelName ?? '').trim();
+  if (!trimmed) return trimmed;
+  return buildModelAliasLookup(modelAlias).get(trimmed.toLowerCase()) ?? trimmed;
+};
+
+const cloneRecordWithModelAliases = (
+  value: unknown,
+  modelAlias: FreeProviderModelAlias
+): unknown => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return value;
+  }
+
+  const source = value as Record<string, unknown>;
+  const apisRaw = source.apis;
+  if (!apisRaw || typeof apisRaw !== 'object' || Array.isArray(apisRaw)) {
+    return value;
+  }
+
+  const lookup = buildModelAliasLookup(modelAlias);
+  if (lookup.size === 0) {
+    return value;
+  }
+
+  const nextApis: Record<string, unknown> = {};
+  Object.entries(apisRaw as Record<string, unknown>).forEach(([apiName, apiData]) => {
+    if (!apiData || typeof apiData !== 'object' || Array.isArray(apiData)) {
+      nextApis[apiName] = apiData;
+      return;
+    }
+
+    const apiRecord = apiData as Record<string, unknown>;
+    const modelsRaw = apiRecord.models;
+    if (!modelsRaw || typeof modelsRaw !== 'object' || Array.isArray(modelsRaw)) {
+      nextApis[apiName] = apiData;
+      return;
+    }
+
+    const nextModels: Record<string, unknown> = {};
+    Object.entries(modelsRaw as Record<string, unknown>).forEach(([modelName, modelData]) => {
+      const resolvedModelName = lookup.get(modelName.trim().toLowerCase()) ?? modelName;
+      if (!modelData || typeof modelData !== 'object' || Array.isArray(modelData)) {
+        nextModels[resolvedModelName] = modelData;
+        return;
+      }
+
+      const modelRecord = modelData as Record<string, unknown>;
+      const existing = nextModels[resolvedModelName];
+      if (!existing || typeof existing !== 'object' || Array.isArray(existing)) {
+        nextModels[resolvedModelName] = { ...modelRecord };
+        return;
+      }
+
+      const existingRecord = existing as Record<string, unknown>;
+      nextModels[resolvedModelName] = {
+        ...existingRecord,
+        total_requests: Number(existingRecord.total_requests ?? 0) + Number(modelRecord.total_requests ?? 0),
+        total_tokens: Number(existingRecord.total_tokens ?? 0) + Number(modelRecord.total_tokens ?? 0),
+        success_count: Number(existingRecord.success_count ?? 0) + Number(modelRecord.success_count ?? 0),
+        failure_count: Number(existingRecord.failure_count ?? 0) + Number(modelRecord.failure_count ?? 0),
+        details: [
+          ...(Array.isArray(existingRecord.details) ? existingRecord.details : []),
+          ...(Array.isArray(modelRecord.details) ? modelRecord.details : []),
+        ],
+      };
+    });
+
+    nextApis[apiName] = { ...apiRecord, models: nextModels };
+  });
+
+  return { ...source, apis: nextApis };
+};
+
+export const applyUsageModelAliases = <T>(usageData: T, modelAlias: FreeProviderModelAlias): T =>
+  cloneRecordWithModelAliases(usageData, modelAlias) as T;
 
 export const computeRoutingRecommendations = (
   providers: FreeProviderResolvedItem[]

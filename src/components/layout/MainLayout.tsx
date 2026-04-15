@@ -457,6 +457,7 @@ export function MainLayout() {
     const freeProvidersIndex = navOrder.indexOf('/free-providers');
     if (freeProvidersIndex !== -1) {
       if (normalizedPath === '/free-providers') return freeProvidersIndex;
+      if (normalizedPath.startsWith('/free-providers/model-alias')) return freeProvidersIndex + 0.2;
       if (normalizedPath.startsWith('/free-providers/')) return freeProvidersIndex + 0.1;
     }
 

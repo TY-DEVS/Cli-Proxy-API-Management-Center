@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   FreeProviderFilter,
   FreeProviderKeyEntry,
+  FreeProviderModelAlias,
   FreeProviderResolvedItem,
   FreeProviderStateItem,
 } from '@/types/freeProvider';
@@ -14,6 +15,7 @@ import {
   createFreeProviderKey,
   mergeCatalogWithState,
   mergeDetectedModels,
+  normalizeFreeProviderModelAliasEntries,
 } from '@/features/freeProviders/helpers';
 import type { ModelAlias } from '@/types';
 
@@ -21,6 +23,7 @@ interface FreeProvidersStoreState {
   filter: FreeProviderFilter;
   autoFreeMode: boolean;
   providerStates: Record<string, FreeProviderStateItem>;
+  modelAlias: FreeProviderModelAlias;
   setFilter: (filter: FreeProviderFilter) => void;
   setAutoFreeMode: (enabled: boolean) => void;
   syncCatalog: () => void;
@@ -37,6 +40,8 @@ interface FreeProvidersStoreState {
     keyId: string,
     quota: Partial<FreeProviderKeyEntry['quota']>
   ) => void;
+  saveProviderModelAlias: (providerId: string, entries: FreeProviderModelAlias[string]) => void;
+  deleteProviderModelAlias: (providerId: string) => void;
   getResolvedProviders: () => FreeProviderResolvedItem[];
   ensureProviderState: (providerId: string) => FreeProviderStateItem;
 }
@@ -52,6 +57,7 @@ export const useFreeProvidersStore = create<FreeProvidersStoreState>()(
       filter: 'all',
       autoFreeMode: false,
       providerStates: buildInitialStates(),
+      modelAlias: {},
 
       setFilter: (filter) => set({ filter }),
 
@@ -210,6 +216,30 @@ export const useFreeProvidersStore = create<FreeProvidersStoreState>()(
         }));
       },
 
+      saveProviderModelAlias: (providerId, entries) => {
+        const normalizedProviderId = String(providerId ?? '').trim();
+        if (!normalizedProviderId) return;
+        const normalizedEntries = normalizeFreeProviderModelAliasEntries(entries);
+
+        set((state) => ({
+          modelAlias: {
+            ...state.modelAlias,
+            [normalizedProviderId]: normalizedEntries,
+          },
+        }));
+      },
+
+      deleteProviderModelAlias: (providerId) => {
+        const normalizedProviderId = String(providerId ?? '').trim();
+        if (!normalizedProviderId) return;
+
+        set((state) => {
+          const next = { ...state.modelAlias };
+          delete next[normalizedProviderId];
+          return { modelAlias: next };
+        });
+      },
+
       getResolvedProviders: () => mergeCatalogWithState(FREE_PROVIDERS_CATALOG, get().providerStates),
     }),
     {
@@ -229,6 +259,7 @@ export const useFreeProvidersStore = create<FreeProvidersStoreState>()(
       partialize: (state) => ({
         autoFreeMode: state.autoFreeMode,
         providerStates: state.providerStates,
+        modelAlias: state.modelAlias,
       }),
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<FreeProvidersStoreState>;
@@ -237,6 +268,7 @@ export const useFreeProvidersStore = create<FreeProvidersStoreState>()(
           ...currentState,
           ...persisted,
           providerStates: mergedStates,
+          modelAlias: persisted.modelAlias ?? {},
         };
       },
     }

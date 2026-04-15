@@ -14,8 +14,15 @@ import {
 } from '@/components/freeProviders';
 import { freeProvidersApi } from '@/features/freeProviders/api';
 import { getFreeProviderCatalogEntry } from '@/features/freeProviders/catalog';
-import { createFreeProviderKey, getResolvedProviderHealth, getResolvedProviderStatus } from '@/features/freeProviders/helpers';
+import {
+  applyModelAliasEntries,
+  createFreeProviderKey,
+  getProviderModelAliasEntries,
+  getResolvedProviderHealth,
+  getResolvedProviderStatus,
+} from '@/features/freeProviders/helpers';
 import { useFreeProvidersStore, useNotificationStore } from '@/stores';
+import type { ModelAlias } from '@/types';
 import { generateId } from '@/utils/helpers';
 import styles from './FreeProvidersPage.module.scss';
 
@@ -33,6 +40,7 @@ export function FreeProviderDetailPage() {
   const updateProviderKeyQuota = useFreeProvidersStore((state) => state.updateProviderKeyQuota);
   const updateProviderModels = useFreeProvidersStore((state) => state.updateProviderModels);
   const setProviderStatus = useFreeProvidersStore((state) => state.setProviderStatus);
+  const modelAlias = useFreeProvidersStore((state) => state.modelAlias);
 
   const provider = useMemo(
     () => getResolvedProviders().find((item) => item.id === providerId),
@@ -55,6 +63,10 @@ export function FreeProviderDetailPage() {
   }
 
   const status = getResolvedProviderStatus(provider);
+  const resolvedModels = applyModelAliasEntries(
+    provider.state.models,
+    getProviderModelAliasEntries(modelAlias, provider.id)
+  );
 
   const handleAddKey = () => {
     const trimmedApiKey = apiKey.trim();
@@ -165,6 +177,9 @@ export function FreeProviderDetailPage() {
       rightAction={<Button size="sm" onClick={() => setModalOpen(true)}>Add API Key</Button>}
       floatingAction={
         <div className={styles.actionsRow}>
+          <Button variant="secondary" onClick={() => navigate(`/free-providers/model-alias?provider=${encodeURIComponent(provider.id)}`)}>
+            Model aliases
+          </Button>
           <Button variant="secondary" onClick={handleFetchModels}>Auto-detect models</Button>
           <Button variant="secondary" onClick={handleTestProvider} loading={providerTesting}>Test provider</Button>
         </div>
@@ -195,7 +210,7 @@ export function FreeProviderDetailPage() {
               />
             </div>
             <div className={styles.modelList} style={{ marginTop: 12 }}>
-              {provider.state.models.map((model) => (
+              {resolvedModels.map((model: ModelAlias) => (
                 <span key={model.name} className={styles.modelTag}>{model.alias ? `${model.name} (${model.alias})` : model.name}</span>
               ))}
             </div>

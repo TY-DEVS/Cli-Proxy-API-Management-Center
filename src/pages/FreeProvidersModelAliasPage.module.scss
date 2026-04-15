@@ -1,0 +1,150 @@
+@use '../styles/variables' as *;
+
+.pageContent {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.settingsCard,
+.previewCard {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  align-items: center;
+}
+
+.settingsHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settingsHeaderTitle,
+.mappingsTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.settingsHeaderHint,
+.settingsDesc,
+.emptyHint {
+  color: var(--text-secondary);
+}
+
+.settingsSection,
+.mappingsBody {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.settingsRow,
+.mappingRow {
+  display: flex;
+  gap: $spacing-md;
+  align-items: center;
+}
+
+.settingsInfo {
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settingsControl {
+  flex: 1;
+}
+
+.settingsLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.tagList,
+.previewTagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag,
+.previewTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.tagActive {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+}
+
+.mappingsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.mappingSeparator {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.mappingAliasInput {
+  flex: 1;
+}
+
+.mappingFork {
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .settingsRow,
+  .mappingRow,
+  .mappingsHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .settingsInfo {
+    min-width: 0;
+  }
+}
+
+.diagramWrap {
+  min-height: 420px;
+}
+
+.aliasList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.aliasListItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-md;
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--bg-secondary);
+}

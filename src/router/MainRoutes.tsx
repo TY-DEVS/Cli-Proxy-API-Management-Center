@@ -19,6 +19,7 @@ import { QuotaPage } from '@/pages/QuotaPage';
 import { UsagePage } from '@/pages/UsagePage';
 import { FreeProvidersPage } from '@/pages/FreeProvidersPage';
 import { FreeProviderDetailPage } from '@/pages/FreeProviderDetailPage';
+import { FreeProvidersModelAliasPage } from '@/pages/FreeProvidersModelAliasPage';
 import { ConfigPage } from '@/pages/ConfigPage';
 import { LogsPage } from '@/pages/LogsPage';
 import { SystemPage } from '@/pages/SystemPage';
@@ -70,6 +71,7 @@ const mainRoutes = [
   { path: '/ai-providers', element: <AiProvidersPage /> },
   { path: '/ai-providers/*', element: <AiProvidersPage /> },
   { path: '/free-providers', element: <FreeProvidersPage /> },
+  { path: '/free-providers/model-alias', element: <FreeProvidersModelAliasPage /> },
   { path: '/free-providers/:providerId', element: <FreeProviderDetailPage /> },
   { path: '/auth-files', element: <AuthFilesPage /> },
   { path: '/auth-files/oauth-excluded', element: <AuthFilesOAuthExcludedEditPage /> },

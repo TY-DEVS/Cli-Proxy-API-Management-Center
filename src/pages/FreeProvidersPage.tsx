@@ -9,8 +9,10 @@ import { providersApi } from '@/services/api';
 import { useConfigStore, useFreeProvidersStore, useNotificationStore } from '@/stores';
 import type { FreeProviderFilter, FreeProviderResolvedItem } from '@/types/freeProvider';
 import {
+  applyModelAliasEntries,
   buildOpenAIProvidersFromFreeProviders,
   computeRoutingRecommendations,
+  getProviderModelAliasEntries,
   getResolvedProviderStatus,
 } from '@/features/freeProviders/helpers';
 import styles from './FreeProvidersPage.module.scss';
@@ -39,6 +41,7 @@ export function FreeProvidersPage() {
   const setAutoFreeMode = useFreeProvidersStore((state) => state.setAutoFreeMode);
   const syncCatalog = useFreeProvidersStore((state) => state.syncCatalog);
   const setProviderEnabled = useFreeProvidersStore((state) => state.setProviderEnabled);
+  const modelAlias = useFreeProvidersStore((state) => state.modelAlias);
   const getResolvedProviders = useFreeProvidersStore((state) => state.getResolvedProviders);
   const config = useConfigStore((state) => state.config);
   const updateConfigValue = useConfigStore((state) => state.updateConfigValue);
@@ -63,7 +66,7 @@ export function FreeProvidersPage() {
   };
 
   const handleExportOpenAIProviders = async () => {
-    const generated = buildOpenAIProvidersFromFreeProviders(providers);
+    const generated = buildOpenAIProvidersFromFreeProviders(providers, modelAlias);
     if (!generated.length) {
       showNotification('Enable at least one OpenAI-compatible provider and add an API key first.', 'warning');
       return;
@@ -98,6 +101,9 @@ export function FreeProvidersPage() {
         </div>
         <div className={styles.headerActions}>
           <Button variant="secondary" onClick={handleSyncCatalog}>Sync Free Providers</Button>
+          <Button variant="secondary" onClick={() => navigate('/free-providers/model-alias')}>
+            Model Aliases
+          </Button>
           <Button variant="secondary" onClick={handleExportOpenAIProviders} loading={syncing}>
             Sync to OpenAI Providers
           </Button>
@@ -160,6 +166,10 @@ export function FreeProvidersPage() {
         {filteredProviders.map((provider) => {
           const status = getResolvedProviderStatus(provider);
           const activeKeys = provider.state.keys.filter((key) => key.enabled).length;
+          const resolvedModels = applyModelAliasEntries(
+            provider.state.models,
+            getProviderModelAliasEntries(modelAlias, provider.id)
+          );
           return (
             <Card key={provider.id} className={styles.providerCard}>
               <div className={styles.providerHeader}>
@@ -190,7 +200,7 @@ export function FreeProvidersPage() {
                 </div>
                 <div className={styles.metaCard}>
                   <span className={styles.metaLabel}>Models</span>
-                  <span className={styles.metaValue}>{provider.state.models.length}</span>
+                  <span className={styles.metaValue}>{resolvedModels.length}</span>
                 </div>
                 <div className={styles.metaCard}>
                   <span className={styles.metaLabel}>Priority</span>

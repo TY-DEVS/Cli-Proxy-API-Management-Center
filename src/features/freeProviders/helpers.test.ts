@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { FREE_PROVIDERS_CATALOG } from './catalog';
 import {
+  applyModelAliasEntries,
   buildOpenAIProvidersFromFreeProviders,
   computeRoutingRecommendations,
   createDefaultFreeProviderState,
+  getProviderModelAliasEntries,
   mergeCatalogWithState,
   mergeDetectedModels,
 } from './helpers';
@@ -26,6 +28,7 @@ describe('freeProviders helpers', () => {
       state: {
         ...createDefaultFreeProviderState(openrouter),
         enabled: true,
+        models: [{ name: 'gpt-oss-20b' }],
         keys: [
           {
             id: 'k1',
@@ -39,10 +42,13 @@ describe('freeProviders helpers', () => {
       },
     }];
 
-    const generated = buildOpenAIProvidersFromFreeProviders(resolved);
+    const generated = buildOpenAIProvidersFromFreeProviders(resolved, {
+      openrouter: [{ name: 'gpt-oss-20b', alias: 'oss-default' }],
+    });
     expect(generated).toHaveLength(1);
     expect(generated[0]?.baseUrl).toBe(openrouter.openaiBaseUrl);
     expect(generated[0]?.apiKeyEntries[0]?.apiKey).toBe('test-key');
+    expect(generated[0]?.models?.[0]?.alias).toBe('oss-default');
   });
 
   it('computes routing recommendations favoring enabled free providers', () => {
@@ -72,5 +78,25 @@ describe('freeProviders helpers', () => {
       [{ name: 'gpt-oss-20b' }, { name: 'llama-3.3-70b' }]
     );
     expect(merged).toHaveLength(2);
+  });
+
+  it('applies provider model aliases without duplicating raw source names', () => {
+    const aliases = getProviderModelAliasEntries(
+      {
+        openrouter: [
+          { name: 'gpt-oss-20b', alias: 'oss-default' },
+          { name: 'llama-3.3-70b', alias: 'fast-general' },
+        ],
+      },
+      'openrouter'
+    );
+    const resolved = applyModelAliasEntries(
+      [{ name: 'gpt-oss-20b' }, { name: 'llama-3.3-70b' }],
+      aliases
+    );
+    expect(resolved).toEqual([
+      { name: 'gpt-oss-20b', alias: 'oss-default' },
+      { name: 'llama-3.3-70b', alias: 'fast-general' },
+    ]);
   });
 });

@@ -1,4 +1,5 @@
 import type { ModelAlias } from './provider';
+import type { OAuthModelAliasEntry } from './oauth';
 import type {
   FreeProviderCatalogEntry,
   FreeProviderCategory,
@@ -68,3 +69,5 @@ export interface FreeProviderRoutingRecommendation {
   reason: string;
   score: number;
 }
+
+export type FreeProviderModelAlias = Record<string, OAuthModelAliasEntry[]>;

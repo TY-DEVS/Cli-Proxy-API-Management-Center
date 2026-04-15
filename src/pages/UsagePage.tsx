@@ -16,7 +16,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Select } from '@/components/ui/Select';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
-import { useThemeStore, useConfigStore } from '@/stores';
+import { useThemeStore, useConfigStore, useFreeProvidersStore } from '@/stores';
 import {
   StatCards,
   UsageChart,
@@ -40,6 +40,7 @@ import {
   filterUsageByTimeRange,
   type UsageTimeRange
 } from '@/utils/usage';
+import { applyUsageModelAliases } from '@/features/freeProviders/helpers';
 import styles from './UsagePage.module.scss';
 
 // Register Chart.js components
@@ -121,6 +122,7 @@ export function UsagePage() {
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
   const isDark = resolvedTheme === 'dark';
   const config = useConfigStore((state) => state.config);
+  const freeProviderModelAlias = useFreeProvidersStore((state) => state.modelAlias);
 
   // Data hook
   const {
@@ -141,6 +143,11 @@ export function UsagePage() {
 
   useHeaderRefresh(loadUsage);
 
+  const aliasedUsage = useMemo(
+    () => (usage ? applyUsageModelAliases(usage, freeProviderModelAlias) : null),
+    [freeProviderModelAlias, usage]
+  );
+
   // Chart lines state
   const [chartLines, setChartLines] = useState<string[]>(loadChartLines);
   const [timeRange, setTimeRange] = useState<UsageTimeRange>(loadTimeRange);
@@ -155,8 +162,8 @@ export function UsagePage() {
   );
 
   const filteredUsage = useMemo(
-    () => (usage ? filterUsageByTimeRange(usage, timeRange) : null),
-    [usage, timeRange]
+    () => (aliasedUsage ? filterUsageByTimeRange(aliasedUsage, timeRange) : null),
+    [aliasedUsage, timeRange]
   );
   const hourWindowHours =
     timeRange === 'all' ? undefined : HOUR_WINDOW_BY_TIME_RANGE[timeRange];
@@ -211,7 +218,7 @@ export function UsagePage() {
   } = useChartData({ usage: filteredUsage, chartLines, isDark, isMobile, hourWindowHours });
 
   // Derived data
-  const modelNames = useMemo(() => getModelNamesFromUsage(usage), [usage]);
+  const modelNames = useMemo(() => getModelNamesFromUsage(aliasedUsage), [aliasedUsage]);
   const apiStats = useMemo(
     () => getApiStats(filteredUsage, modelPrices),
     [filteredUsage, modelPrices]
