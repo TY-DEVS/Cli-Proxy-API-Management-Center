@@ -11,6 +11,7 @@ import { STORAGE_KEY_FREE_PROVIDERS } from '@/utils/constants';
 import { obfuscatedStorage } from '@/services/storage/secureStorage';
 import { FREE_PROVIDERS_CATALOG } from '@/features/freeProviders/catalog';
 import {
+  buildAutoLinkedModelAliases,
   createDefaultFreeProviderState,
   createFreeProviderKey,
   mergeCatalogWithState,
@@ -40,6 +41,7 @@ interface FreeProvidersStoreState {
     keyId: string,
     quota: Partial<FreeProviderKeyEntry['quota']>
   ) => void;
+  autoLinkDuplicateModels: () => number;
   saveProviderModelAlias: (providerId: string, entries: FreeProviderModelAlias[string]) => void;
   deleteProviderModelAlias: (providerId: string) => void;
   getResolvedProviders: () => FreeProviderResolvedItem[];
@@ -214,6 +216,22 @@ export const useFreeProvidersStore = create<FreeProvidersStoreState>()(
             },
           },
         }));
+      },
+
+      autoLinkDuplicateModels: () => {
+        const providers = get().getResolvedProviders();
+        const beforeCount = Object.values(get().modelAlias).reduce(
+          (total, entries) => total + normalizeFreeProviderModelAliasEntries(entries).length,
+          0
+        );
+        const nextAlias = buildAutoLinkedModelAliases(providers, get().modelAlias);
+        const afterCount = Object.values(nextAlias).reduce(
+          (total, entries) => total + normalizeFreeProviderModelAliasEntries(entries).length,
+          0
+        );
+
+        set({ modelAlias: nextAlias });
+        return Math.max(0, afterCount - beforeCount);
       },
 
       saveProviderModelAlias: (providerId, entries) => {

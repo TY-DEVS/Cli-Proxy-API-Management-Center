@@ -6,6 +6,8 @@ import React from 'react';
 import type { ReactNode } from 'react';
 import type { TFunction } from 'i18next';
 import type {
+  AmazonQuotaRow,
+  AmazonQuotaState,
   AntigravityQuotaGroup,
   AntigravityModelsPayload,
   AntigravityQuotaState,
@@ -40,6 +42,8 @@ import {
   CLAUDE_USAGE_WINDOW_KEYS,
   CODEX_USAGE_URL,
   CODEX_REQUEST_HEADERS,
+  AMAZON_Q_USAGE_URL,
+  AMAZON_Q_REQUEST_HEADERS,
   GEMINI_CLI_QUOTA_URL,
   GEMINI_CLI_CODE_ASSIST_URL,
   GEMINI_CLI_REQUEST_HEADERS,
@@ -56,6 +60,7 @@ import {
   parseGeminiCliQuotaPayload,
   parseGeminiCliCodeAssistPayload,
   parseKimiUsagePayload,
+  parseAmazonUsagePayload,
   resolveCodexChatgptAccountId,
   resolveCodexPlanType,
   resolveGeminiCliProjectId,
@@ -65,8 +70,10 @@ import {
   buildAntigravityQuotaGroups,
   buildGeminiCliQuotaBuckets,
   buildKimiQuotaRows,
+  buildAmazonQuotaRows,
   createStatusError,
   getStatusFromError,
+  isAmazonFile,
   isAntigravityFile,
   isClaudeFile,
   isCodexFile,
@@ -81,7 +88,7 @@ import styles from '@/pages/QuotaPage.module.scss';
 
 type QuotaUpdater<T> = T | ((prev: T) => T);
 
-type QuotaType = 'antigravity' | 'claude' | 'codex' | 'gemini-cli' | 'kimi';
+type QuotaType = 'amazon' | 'antigravity' | 'claude' | 'codex' | 'gemini-cli' | 'kimi';
 
 const DEFAULT_ANTIGRAVITY_PROJECT_ID = 'bamboo-precept-lgxtn';
 const QUOTA_PROGRESS_HIGH_THRESHOLD = 70;
@@ -93,11 +100,13 @@ const geminiCliSupplementaryCache = new Map<
 >();
 
 export interface QuotaStore {
+  amazonQuota: Record<string, AmazonQuotaState>;
   antigravityQuota: Record<string, AntigravityQuotaState>;
   claudeQuota: Record<string, ClaudeQuotaState>;
   codexQuota: Record<string, CodexQuotaState>;
   geminiCliQuota: Record<string, GeminiCliQuotaState>;
   kimiQuota: Record<string, KimiQuotaState>;
+  setAmazonQuota: (updater: QuotaUpdater<Record<string, AmazonQuotaState>>) => void;
   setAntigravityQuota: (updater: QuotaUpdater<Record<string, AntigravityQuotaState>>) => void;
   setClaudeQuota: (updater: QuotaUpdater<Record<string, ClaudeQuotaState>>) => void;
   setCodexQuota: (updater: QuotaUpdater<Record<string, CodexQuotaState>>) => void;
@@ -1345,4 +1354,119 @@ export const KIMI_CONFIG: QuotaConfig<KimiQuotaState, KimiQuotaRow[]> = {
   controlClassName: styles.kimiControl,
   gridClassName: styles.kimiGrid,
   renderQuotaItems: renderKimiItems,
+};
+
+const fetchAmazonQuota = async (
+  file: AuthFileItem,
+  t: TFunction
+): Promise<AmazonQuotaRow[]> => {
+  const rawAuthIndex = file['auth_index'] ?? file.authIndex;
+  const authIndex = normalizeAuthIndex(rawAuthIndex);
+  if (!authIndex) {
+    throw new Error(t('amazon_quota.missing_auth_index'));
+  }
+
+  const result = await apiCallApi.request({
+    authIndex,
+    method: 'GET',
+    url: AMAZON_Q_USAGE_URL,
+    header: { ...AMAZON_Q_REQUEST_HEADERS },
+  });
+
+  if (result.statusCode < 200 || result.statusCode >= 300) {
+    throw createStatusError(getApiCallErrorMessage(result), result.statusCode);
+  }
+
+  const payload = parseAmazonUsagePayload(result.body ?? result.bodyText);
+  if (!payload) {
+    throw new Error(t('amazon_quota.empty_data'));
+  }
+
+  const rows = buildAmazonQuotaRows(payload);
+  if (rows.length === 0) {
+    throw new Error(t('amazon_quota.empty_data'));
+  }
+
+  return rows;
+};
+
+const renderAmazonItems = (
+  quota: AmazonQuotaState,
+  t: TFunction,
+  helpers: QuotaRenderHelpers
+): ReactNode => {
+  const { styles: styleMap, QuotaProgressBar } = helpers;
+  const { createElement: h } = React;
+  const rows = quota.rows ?? [];
+
+  if (rows.length === 0) {
+    return h('div', { className: styleMap.quotaMessage }, t('amazon_quota.empty_data'));
+  }
+
+  return rows.map((row) => {
+    const limit = row.limit;
+    const used = row.used;
+    const remaining =
+      limit > 0
+        ? Math.max(0, Math.min(100, Math.round(((limit - used) / limit) * 100)))
+        : used > 0
+          ? 0
+          : null;
+    const percentLabel = remaining === null ? '--' : `${remaining}%`;
+    const rowLabel = row.labelKey
+      ? t(row.labelKey, (row.labelParams ?? {}) as Record<string, string | number>)
+      : row.label ?? '';
+    const resetLabel = row.resetHint
+      ? t('amazon_quota.reset_hint', { hint: row.resetHint })
+      : null;
+
+    return h(
+      'div',
+      { key: row.id, className: styleMap.quotaRow },
+      h(
+        'div',
+        { className: styleMap.quotaRowHeader },
+        h('span', { className: styleMap.quotaModel }, rowLabel),
+        h(
+          'div',
+          { className: styleMap.quotaMeta },
+          h('span', { className: styleMap.quotaPercent }, percentLabel),
+          limit > 0
+            ? h('span', { className: styleMap.quotaAmount }, `${used} / ${limit}`)
+            : null,
+          resetLabel
+            ? h('span', { className: styleMap.quotaReset }, resetLabel)
+            : null
+        )
+      ),
+      h(QuotaProgressBar, {
+        percent: remaining,
+        highThreshold: QUOTA_PROGRESS_HIGH_THRESHOLD,
+        mediumThreshold: QUOTA_PROGRESS_MEDIUM_THRESHOLD,
+      })
+    );
+  });
+};
+
+export const AMAZON_CONFIG: QuotaConfig<AmazonQuotaState, AmazonQuotaRow[]> = {
+  type: 'amazon',
+  i18nPrefix: 'amazon_quota',
+  cardIdleMessageKey: 'quota_management.card_idle_hint',
+  filterFn: (file) => isAmazonFile(file) && !isDisabledAuthFile(file),
+  fetchQuota: fetchAmazonQuota,
+  storeSelector: (state) => state.amazonQuota,
+  storeSetter: 'setAmazonQuota',
+  buildLoadingState: () => ({ status: 'loading', rows: [] }),
+  buildSuccessState: (rows) => ({ status: 'success', rows }),
+  buildErrorState: (message, status) => ({
+    status: 'error',
+    rows: [],
+    error: message,
+    errorStatus: status,
+  }),
+  cardClassName: styles.amazonCard,
+  controlsClassName: styles.amazonControls,
+  controlClassName: styles.amazonControl,
+  gridClassName: styles.amazonGrid,
+  renderQuotaItems: renderAmazonItems,
 };

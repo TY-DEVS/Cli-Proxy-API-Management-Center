@@ -290,6 +290,37 @@ export interface KimiUsagePayload {
   limits?: KimiLimitItem[];
 }
 
+export interface AmazonUsageLimitItem {
+  name?: string;
+  title?: string;
+  scope?: string;
+  period?: string;
+  window?: string;
+  limit?: number | string;
+  max?: number | string;
+  quota?: number | string;
+  total?: number | string;
+  used?: number | string;
+  consumed?: number | string;
+  remaining?: number | string;
+  available?: number | string;
+  resetAt?: string;
+  reset_at?: string;
+  resetTime?: string;
+  reset_time?: string;
+  resetIn?: number | string;
+  reset_in?: number | string;
+  ttl?: number | string;
+}
+
+export interface AmazonUsagePayload {
+  usageLimits?: AmazonUsageLimitItem[];
+  usage_limits?: AmazonUsageLimitItem[];
+  limits?: AmazonUsageLimitItem[];
+  quotas?: AmazonUsageLimitItem[];
+  data?: unknown;
+}
+
 export interface KimiQuotaRow {
   id: string;
   label?: string;
@@ -303,6 +334,23 @@ export interface KimiQuotaRow {
 export interface KimiQuotaState {
   status: 'idle' | 'loading' | 'success' | 'error';
   rows: KimiQuotaRow[];
+  error?: string;
+  errorStatus?: number;
+}
+
+export interface AmazonQuotaRow {
+  id: string;
+  label?: string;
+  labelKey?: string;
+  labelParams?: Record<string, string | number>;
+  used: number;
+  limit: number;
+  resetHint?: string;
+}
+
+export interface AmazonQuotaState {
+  status: 'idle' | 'loading' | 'success' | 'error';
+  rows: AmazonQuotaRow[];
   error?: string;
   errorStatus?: number;
 }

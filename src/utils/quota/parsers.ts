@@ -2,7 +2,14 @@
  * Normalization and parsing functions for quota data.
  */
 
-import type { ClaudeUsagePayload, CodexUsagePayload, GeminiCliCodeAssistPayload, GeminiCliQuotaPayload, KimiUsagePayload } from '@/types';
+import type {
+  AmazonUsagePayload,
+  ClaudeUsagePayload,
+  CodexUsagePayload,
+  GeminiCliCodeAssistPayload,
+  GeminiCliQuotaPayload,
+  KimiUsagePayload,
+} from '@/types';
 import { normalizeAuthIndex } from '@/utils/usage';
 
 const GEMINI_CLI_MODEL_SUFFIX = '_vertex';
@@ -223,4 +230,42 @@ export function parseKimiUsagePayload(payload: unknown): KimiUsagePayload | null
     return payload as KimiUsagePayload;
   }
   return null;
+}
+
+export function parseAmazonUsagePayload(payload: unknown): AmazonUsagePayload | null {
+  const parseObject = (value: unknown): Record<string, unknown> | null => {
+    if (value === undefined || value === null) return null;
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          return parsed as Record<string, unknown>;
+        }
+      } catch {
+        return null;
+      }
+      return null;
+    }
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
+    }
+    return null;
+  };
+
+  const root = parseObject(payload);
+  if (!root) return null;
+
+  const body = parseObject(root.body);
+  if (body) {
+    return body as AmazonUsagePayload;
+  }
+
+  const data = parseObject(root.data);
+  if (data) {
+    return data as AmazonUsagePayload;
+  }
+
+  return root as AmazonUsagePayload;
 }

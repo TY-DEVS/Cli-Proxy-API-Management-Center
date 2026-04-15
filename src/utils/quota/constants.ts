@@ -46,6 +46,10 @@ export const TYPE_COLORS: Record<string, TypeColorSet> = {
     light: { bg: '#f5e3fc', text: '#9025c8' },
     dark: { bg: '#521490', text: '#d49cf5' },
   },
+  amazon: {
+    light: { bg: '#fff3d7', text: '#8a5200' },
+    dark: { bg: '#5d3700', text: '#ffc46b' },
+  },
   vertex: {
     light: { bg: '#e4edfd', text: '#2b5fbc' },
     dark: { bg: '#1a3d80', text: '#89b3f7' },
@@ -190,6 +194,17 @@ export const CODEX_REQUEST_HEADERS = {
   Authorization: 'Bearer $TOKEN$',
   'Content-Type': 'application/json',
   'User-Agent': 'codex_cli_rs/0.76.0 (Debian 13.0.0; x86_64) WindowsTerminal',
+};
+
+// Amazon Q Developer / CodeWhisperer runtime.
+// The real request is performed by CLIProxyAPI because it needs AWS SSO/OIDC cache access
+// and AWS bearer/SigV4-compatible handling discovered from the Amazon Q VS Code extension.
+export const AMAZON_Q_USAGE_URL = 'https://codewhisperer.us-east-1.amazonaws.com/usage-limits';
+
+export const AMAZON_Q_REQUEST_HEADERS = {
+  Authorization: 'Bearer $TOKEN$',
+  'Content-Type': 'application/json',
+  'X-Amz-Target': 'AmazonCodeWhispererService.GetUsageLimits',
 };
 
 // Kimi API configuration

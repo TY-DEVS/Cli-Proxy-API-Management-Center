@@ -111,6 +111,7 @@
 }
 
 .antigravityGrid,
+.amazonGrid,
 .claudeGrid,
 .codexGrid,
 .geminiCliGrid,
@@ -125,6 +126,7 @@
 }
 
 .antigravityControls,
+.amazonControls,
 .claudeControls,
 .codexControls,
 .geminiCliControls,
@@ -137,6 +139,7 @@
 }
 
 .antigravityControl,
+.amazonControl,
 .claudeControl,
 .codexControl,
 .geminiCliControl,
@@ -274,6 +277,12 @@
   background-image: linear-gradient(180deg,
       rgba(220, 232, 255, 0.2),
       rgba(220, 232, 255, 0));
+}
+
+.amazonCard {
+  background-image: linear-gradient(180deg,
+      rgba(255, 243, 215, 0.24),
+      rgba(255, 243, 215, 0));
 }
 
 .quotaSection {

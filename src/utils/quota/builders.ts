@@ -3,6 +3,9 @@
  */
 
 import type {
+  AmazonQuotaRow,
+  AmazonUsageLimitItem,
+  AmazonUsagePayload,
   AntigravityQuotaGroup,
   AntigravityQuotaGroupDefinition,
   AntigravityQuotaInfo,
@@ -402,6 +405,114 @@ export function buildKimiQuotaRows(payload: KimiUsagePayload): KimiQuotaRow[] {
       }
     });
   }
+
+  return rows;
+}
+
+const AMAZON_USAGE_FALLBACK_KEY = 'amazon_quota.usage_limit';
+
+function resolveAmazonLimitItems(payload: AmazonUsagePayload): AmazonUsageLimitItem[] {
+  const fromPayload =
+    payload.usageLimits ?? payload.usage_limits ?? payload.limits ?? payload.quotas ?? [];
+  if (Array.isArray(fromPayload)) {
+    return fromPayload;
+  }
+
+  if (payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+    const nested = payload.data as Record<string, unknown>;
+    const nestedLimits = nested.usageLimits ?? nested.usage_limits ?? nested.limits ?? nested.quotas;
+    if (Array.isArray(nestedLimits)) {
+      return nestedLimits as AmazonUsageLimitItem[];
+    }
+  }
+
+  return [];
+}
+
+function amazonResetHint(item: Record<string, unknown>): string | undefined {
+  const absoluteKeys = ['reset_at', 'resetAt', 'reset_time', 'resetTime'];
+  for (const key of absoluteKeys) {
+    const raw = item[key];
+    if (typeof raw !== 'string' || !raw.trim()) continue;
+    try {
+      const parsed = new Date(raw);
+      if (Number.isNaN(parsed.getTime())) continue;
+      const delta = parsed.getTime() - Date.now();
+      if (delta <= 0) return undefined;
+      const totalMinutes = Math.floor(delta / 60000);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+      if (hours > 0) return `${hours}h`;
+      if (minutes > 0) return `${minutes}m`;
+      return '<1m';
+    } catch {
+      continue;
+    }
+  }
+
+  const relativeKeys = ['reset_in', 'resetIn', 'ttl'];
+  for (const key of relativeKeys) {
+    const raw = toInt(item[key]);
+    if (raw === null || raw <= 0) continue;
+    const hours = Math.floor(raw / 3600);
+    const minutes = Math.floor((raw % 3600) / 60);
+    if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h`;
+    if (minutes > 0) return `${minutes}m`;
+    return '<1m';
+  }
+
+  return undefined;
+}
+
+export function buildAmazonQuotaRows(payload: AmazonUsagePayload): AmazonQuotaRow[] {
+  const rows: AmazonQuotaRow[] = [];
+  const items = resolveAmazonLimitItems(payload);
+  const fallbackItem =
+    payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+      ? (payload.data as AmazonUsageLimitItem)
+      : (payload as AmazonUsageLimitItem);
+  const sourceItems = items.length > 0 ? items : [fallbackItem];
+
+  sourceItems.forEach((item, index) => {
+    const raw = item as Record<string, unknown>;
+    const limit =
+      toInt(raw.limit) ?? toInt(raw.max) ?? toInt(raw.quota) ?? toInt(raw.total);
+    let used = toInt(raw.used) ?? toInt(raw.consumed);
+    const remaining = toInt(raw.remaining) ?? toInt(raw.available);
+
+    if (used === null && remaining !== null && limit !== null) {
+      used = Math.max(0, limit - remaining);
+    }
+    const normalizedUsed = used ?? 0;
+    const normalizedLimit = limit ?? (remaining !== null ? normalizedUsed + remaining : 0);
+    if (normalizedLimit <= 0 && normalizedUsed <= 0) {
+      return;
+    }
+
+    const label =
+      (typeof raw.name === 'string' && raw.name.trim()) ||
+      (typeof raw.title === 'string' && raw.title.trim()) ||
+      (typeof raw.scope === 'string' && raw.scope.trim()) ||
+      (typeof raw.period === 'string' && raw.period.trim()) ||
+      (typeof raw.window === 'string' && raw.window.trim()) ||
+      undefined;
+
+    rows.push({
+      id: `amazon-limit-${index}`,
+      label,
+      labelKey: label ? undefined : AMAZON_USAGE_FALLBACK_KEY,
+      labelParams: label
+        ? undefined
+        : {
+            index: index + 1,
+          },
+      used: normalizedUsed,
+      limit: Math.max(0, normalizedLimit),
+      resetHint: amazonResetHint(raw),
+    });
+  });
 
   return rows;
 }

@@ -17,6 +17,7 @@ import iconKimiDark from '@/assets/icons/kimi-dark.svg';
 import iconQwen from '@/assets/icons/qwen.svg';
 import iconIflow from '@/assets/icons/iflow.svg';
 import iconVertex from '@/assets/icons/vertex.svg';
+import iconAmazon from '@/assets/icons/amazon.svg';
 
 interface ProviderState {
   url?: string;
@@ -77,10 +78,11 @@ const PROVIDERS: { id: OAuthProvider; titleKey: string; hintKey: string; urlLabe
   { id: 'antigravity', titleKey: 'auth_login.antigravity_oauth_title', hintKey: 'auth_login.antigravity_oauth_hint', urlLabelKey: 'auth_login.antigravity_oauth_url_label', icon: iconAntigravity },
   { id: 'gemini-cli', titleKey: 'auth_login.gemini_cli_oauth_title', hintKey: 'auth_login.gemini_cli_oauth_hint', urlLabelKey: 'auth_login.gemini_cli_oauth_url_label', icon: iconGemini },
   { id: 'kimi', titleKey: 'auth_login.kimi_oauth_title', hintKey: 'auth_login.kimi_oauth_hint', urlLabelKey: 'auth_login.kimi_oauth_url_label', icon: { light: iconKimiLight, dark: iconKimiDark } },
-  { id: 'qwen', titleKey: 'auth_login.qwen_oauth_title', hintKey: 'auth_login.qwen_oauth_hint', urlLabelKey: 'auth_login.qwen_oauth_url_label', icon: iconQwen }
+  { id: 'qwen', titleKey: 'auth_login.qwen_oauth_title', hintKey: 'auth_login.qwen_oauth_hint', urlLabelKey: 'auth_login.qwen_oauth_url_label', icon: iconQwen },
+  { id: 'amazon', titleKey: 'auth_login.amazon_oauth_title', hintKey: 'auth_login.amazon_oauth_hint', urlLabelKey: 'auth_login.amazon_oauth_url_label', icon: iconAmazon }
 ];
 
-const CALLBACK_SUPPORTED: OAuthProvider[] = ['codex', 'anthropic', 'antigravity', 'gemini-cli'];
+const CALLBACK_SUPPORTED: OAuthProvider[] = ['codex', 'anthropic', 'antigravity', 'gemini-cli', 'amazon'];
 const getProviderI18nPrefix = (provider: OAuthProvider) => provider.replace('-', '_');
 const getAuthKey = (provider: OAuthProvider, suffix: string) =>
   `auth_login.${getProviderI18nPrefix(provider)}_${suffix}`;
@@ -88,6 +90,22 @@ const getAuthKey = (provider: OAuthProvider, suffix: string) =>
 const getIcon = (icon: string | { light: string; dark: string }, theme: 'light' | 'dark') => {
   return typeof icon === 'string' ? icon : icon[theme];
 };
+
+function resolvePollingState(res: { url: string; state?: string }): string | undefined {
+  if (res.state?.trim()) {
+    return res.state.trim();
+  }
+  try {
+    const parsed = new URL(res.url);
+    const stateFromUrl =
+      parsed.searchParams.get('state') ??
+      parsed.searchParams.get('oauth_state') ??
+      parsed.searchParams.get('client_state');
+    return stateFromUrl?.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export function OAuthPage() {
   const { t } = useTranslation();
@@ -176,12 +194,26 @@ export function OAuthPage() {
         provider,
         provider === 'gemini-cli' ? { projectId: projectId || undefined } : undefined
       );
-      updateProviderState(provider, { url: res.url, state: res.state, status: 'waiting', polling: true });
-      if (res.state) {
-        startPolling(provider, res.state);
+      const resolvedState = resolvePollingState(res);
+      const shouldPoll = Boolean(resolvedState);
+      updateProviderState(provider, {
+        url: res.url,
+        state: resolvedState,
+        status: 'waiting',
+        polling: shouldPoll
+      });
+      if (resolvedState) {
+        startPolling(provider, resolvedState);
       }
     } catch (err: unknown) {
-      const message = getErrorMessage(err);
+      const rawMessage = getErrorMessage(err);
+      const message =
+        rawMessage.includes('Invalid OAuth response')
+          ? t('auth_login.oauth_invalid_response_hint', {
+              defaultValue:
+                'Invalid OAuth response from API. Please check API address points to CLI Proxy API backend (local dev usually http://localhost:8317).'
+            })
+          : rawMessage;
       updateProviderState(provider, { status: 'error', error: message, polling: false });
       showNotification(
         `${t(getAuthKey(provider, 'oauth_start_error'))}${message ? ` ${message}` : ''}`,
@@ -212,7 +244,12 @@ export function OAuthPage() {
     });
     try {
       await oauthApi.submitCallback(provider, redirectUrl);
-      updateProviderState(provider, { callbackSubmitting: false, callbackStatus: 'success' });
+      const hasPollingState = Boolean(states[provider]?.state);
+      updateProviderState(provider, {
+        callbackSubmitting: false,
+        callbackStatus: 'success',
+        ...(hasPollingState ? {} : { status: 'success', polling: false })
+      });
       showNotification(t('auth_login.oauth_callback_success'), 'success');
     } catch (err: unknown) {
       const status = getErrorStatus(err);

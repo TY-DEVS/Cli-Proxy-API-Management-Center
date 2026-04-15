@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import iconAntigravity from '@/assets/icons/antigravity.svg';
+import iconAmazon from '@/assets/icons/amazon.svg';
 import iconClaude from '@/assets/icons/claude.svg';
 import iconCodex from '@/assets/icons/codex.svg';
 import iconGemini from '@/assets/icons/gemini.svg';
@@ -27,7 +28,7 @@ export type AuthFileModelItem = {
 };
 export type AuthFileIconAsset = string | { light: string; dark: string };
 
-export type QuotaProviderType = 'antigravity' | 'claude' | 'codex' | 'gemini-cli' | 'kimi';
+export type QuotaProviderType = 'antigravity' | 'claude' | 'codex' | 'gemini-cli' | 'kimi' | 'amazon';
 
 export const QUOTA_PROVIDER_TYPES = new Set<QuotaProviderType>([
   'antigravity',
@@ -35,6 +36,7 @@ export const QUOTA_PROVIDER_TYPES = new Set<QuotaProviderType>([
   'codex',
   'gemini-cli',
   'kimi',
+  'amazon',
 ]);
 
 export const MIN_CARD_PAGE_SIZE = 3;
@@ -92,6 +94,10 @@ export const TYPE_COLORS: Record<string, TypeColorSet> = {
     light: { bg: '#f5e3fc', text: '#9025c8' },
     dark: { bg: '#521490', text: '#d49cf5' },
   },
+  amazon: {
+    light: { bg: '#fff3d7', text: '#8a5200' },
+    dark: { bg: '#5d3700', text: '#ffc46b' },
+  },
   // Vertex logo: Google 蓝 #4285F4
   vertex: {
     light: { bg: '#e4edfd', text: '#2b5fbc' },
@@ -115,6 +121,7 @@ export const AUTH_FILE_ICONS: Record<string, AuthFileIconAsset> = {
   gemini: iconGemini,
   'gemini-cli': iconGemini,
   iflow: iconIflow,
+  amazon: iconAmazon,
   kimi: { light: iconKimiLight, dark: iconKimiDark },
   qwen: iconQwen,
   vertex: iconVertex,

@@ -1,5 +1,24 @@
 import { DEFAULT_API_PORT, MANAGEMENT_API_PREFIX } from './constants';
 
+const DEV_FRONTEND_PORTS = new Set(['5173', '4173', '4174']);
+
+const coerceDevFrontendBaseToApiBase = (normalizedBase: string): string => {
+  if (!normalizedBase || !import.meta.env.DEV) {
+    return normalizedBase;
+  }
+
+  try {
+    const parsed = new URL(normalizedBase);
+    if (isLocalhost(parsed.hostname) && DEV_FRONTEND_PORTS.has(parsed.port)) {
+      return `${parsed.protocol}//${parsed.hostname}:${DEFAULT_API_PORT}`;
+    }
+  } catch {
+    // Keep original value if URL parsing fails.
+  }
+
+  return normalizedBase;
+};
+
 export const normalizeApiBase = (input: string): string => {
   let base = (input || '').trim();
   if (!base) return '';
@@ -8,7 +27,7 @@ export const normalizeApiBase = (input: string): string => {
   if (!/^https?:\/\//i.test(base)) {
     base = `http://${base}`;
   }
-  return base;
+  return coerceDevFrontendBaseToApiBase(base);
 };
 
 export const computeApiUrl = (base: string): string => {

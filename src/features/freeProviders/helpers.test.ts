@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FREE_PROVIDERS_CATALOG } from './catalog';
 import {
   applyModelAliasEntries,
+  buildAutoLinkedModelAliases,
   buildOpenAIProvidersFromFreeProviders,
   computeRoutingRecommendations,
   createDefaultFreeProviderState,
@@ -98,5 +99,34 @@ describe('freeProviders helpers', () => {
       { name: 'gpt-oss-20b', alias: 'oss-default' },
       { name: 'llama-3.3-70b', alias: 'fast-general' },
     ]);
+  });
+
+  it('auto-links repeated models across providers to one shared alias', () => {
+    const first = FREE_PROVIDERS_CATALOG.find((entry) => entry.id === 'openrouter');
+    const second = FREE_PROVIDERS_CATALOG.find((entry) => entry.id === 'groq');
+    expect(first).toBeTruthy();
+    expect(second).toBeTruthy();
+    if (!first || !second) return;
+
+    const providers: FreeProviderResolvedItem[] = [
+      {
+        ...first,
+        state: {
+          ...createDefaultFreeProviderState(first),
+          models: [{ name: 'openai/gpt-oss-20b:free' }],
+        },
+      },
+      {
+        ...second,
+        state: {
+          ...createDefaultFreeProviderState(second),
+          models: [{ name: 'gpt-oss-20b' }],
+        },
+      },
+    ];
+
+    const alias = buildAutoLinkedModelAliases(providers);
+    expect(alias.openrouter?.[0]).toEqual({ name: 'openai/gpt-oss-20b:free', alias: 'gpt-oss-20b', fork: true });
+    expect(alias.groq?.[0]).toEqual({ name: 'gpt-oss-20b', alias: 'gpt-oss-20b', fork: true });
   });
 });

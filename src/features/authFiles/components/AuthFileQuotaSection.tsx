@@ -2,6 +2,7 @@ import { useCallback, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import {
+  AMAZON_CONFIG,
   ANTIGRAVITY_CONFIG,
   CLAUDE_CONFIG,
   CODEX_CONFIG,
@@ -22,6 +23,7 @@ import styles from '@/pages/AuthFilesPage.module.scss';
 type QuotaState = { status?: string; error?: string; errorStatus?: number } | undefined;
 
 const getQuotaConfig = (type: QuotaProviderType) => {
+  if (type === 'amazon') return AMAZON_CONFIG;
   if (type === 'antigravity') return ANTIGRAVITY_CONFIG;
   if (type === 'claude') return CLAUDE_CONFIG;
   if (type === 'codex') return CODEX_CONFIG;
@@ -41,6 +43,7 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
   const showNotification = useNotificationStore((state) => state.showNotification);
 
   const quota = useQuotaStore((state) => {
+    if (quotaType === 'amazon') return state.amazonQuota[file.name] as QuotaState;
     if (quotaType === 'antigravity') return state.antigravityQuota[file.name] as QuotaState;
     if (quotaType === 'claude') return state.claudeQuota[file.name] as QuotaState;
     if (quotaType === 'codex') return state.codexQuota[file.name] as QuotaState;
@@ -49,6 +52,7 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
   });
 
   const updateQuotaState = useQuotaStore((state) => {
+    if (quotaType === 'amazon') return state.setAmazonQuota as unknown as (updater: unknown) => void;
     if (quotaType === 'antigravity') return state.setAntigravityQuota as unknown as (updater: unknown) => void;
     if (quotaType === 'claude') return state.setClaudeQuota as unknown as (updater: unknown) => void;
     if (quotaType === 'codex') return state.setCodexQuota as unknown as (updater: unknown) => void;

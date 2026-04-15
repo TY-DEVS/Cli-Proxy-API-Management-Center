@@ -46,6 +46,7 @@ export function FreeProvidersModelAliasPage() {
   const { showNotification } = useNotificationStore();
   const getResolvedProviders = useFreeProvidersStore((state) => state.getResolvedProviders);
   const modelAlias = useFreeProvidersStore((state) => state.modelAlias);
+  const autoLinkDuplicateModels = useFreeProvidersStore((state) => state.autoLinkDuplicateModels);
   const saveProviderModelAlias = useFreeProvidersStore((state) => state.saveProviderModelAlias);
   const deleteProviderModelAlias = useFreeProvidersStore((state) => state.deleteProviderModelAlias);
   const diagramRef = useRef<ModelMappingDiagramRef | null>(null);
@@ -176,6 +177,16 @@ export function FreeProvidersModelAliasPage() {
     handleBack();
   }, [deleteProviderModelAlias, handleBack, mappings, provider, saveProviderModelAlias, showNotification]);
 
+  const handleAutoLinkDuplicates = useCallback(() => {
+    const added = autoLinkDuplicateModels();
+    showNotification(
+      added > 0
+        ? `Linked ${added} repeated provider model(s) to shared aliases.`
+        : 'No repeated provider models found to link.',
+      added > 0 ? 'success' : 'info'
+    );
+  }, [autoLinkDuplicateModels, showNotification]);
+
   const updateProviderMappings = useCallback(
     (providerId: string, updater: (entries: OAuthModelAliasEntry[]) => OAuthModelAliasEntry[]) => {
       const normalizedProviderId = providerId.trim();
@@ -293,9 +304,14 @@ export function FreeProvidersModelAliasPage() {
       onBack={handleBack}
       backLabel="Free Providers"
       rightAction={
-        <Button size="sm" onClick={handleSave}>
-          Save
-        </Button>
+        <div className={styles.headerActions}>
+          <Button variant="secondary" size="sm" onClick={handleAutoLinkDuplicates}>
+            Auto-link duplicates
+          </Button>
+          <Button size="sm" onClick={handleSave}>
+            Save
+          </Button>
+        </div>
       }
       contentClassName={styles.pageContent}
     >
@@ -303,7 +319,7 @@ export function FreeProvidersModelAliasPage() {
         <div className={styles.settingsHeader}>
           <div className={styles.settingsHeaderTitle}>Provider</div>
           <div className={styles.settingsHeaderHint}>
-            Map provider models to shared aliases so the same LLM family is not repeated across providers.
+            Map repeated provider models to shared aliases so the same LLM family is linked once instead of duplicated per provider.
           </div>
         </div>
 

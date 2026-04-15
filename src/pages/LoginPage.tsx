@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, type FormEvent } from 'react';
 import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
@@ -172,6 +172,16 @@ export function LoginPage() {
     [loading, handleSubmit]
   );
 
+  const handleFormSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!loading) {
+        void handleSubmit();
+      }
+    },
+    [handleSubmit, loading]
+  );
+
   if (isAuthenticated && !autoLoading && !autoLoginSuccess) {
     const redirect = (location.state as RedirectState | null)?.from?.pathname || '/';
     return <Navigate to={redirect} replace />;
@@ -226,76 +236,78 @@ export function LoginPage() {
                 <div className={styles.subtitle}>{t('login.subtitle')}</div>
               </div>
 
-              <div className={styles.connectionBox}>
-                <div className={styles.label}>{t('login.connection_current')}</div>
-                <div className={styles.value}>{apiBase || detectedBase}</div>
-                <div className={styles.hint}>{t('login.connection_auto_hint')}</div>
-              </div>
+              <form onSubmit={handleFormSubmit}>
+                <div className={styles.connectionBox}>
+                  <div className={styles.label}>{t('login.connection_current')}</div>
+                  <div className={styles.value}>{apiBase || detectedBase}</div>
+                  <div className={styles.hint}>{t('login.connection_auto_hint')}</div>
+                </div>
 
-              <div className={styles.toggleAdvanced}>
-                <SelectionCheckbox
-                  checked={showCustomBase}
-                  onChange={setShowCustomBase}
-                  ariaLabel={t('login.custom_connection_label')}
-                  label={t('login.custom_connection_label')}
-                  labelClassName={styles.toggleLabel}
-                />
-              </div>
+                <div className={styles.toggleAdvanced}>
+                  <SelectionCheckbox
+                    checked={showCustomBase}
+                    onChange={setShowCustomBase}
+                    ariaLabel={t('login.custom_connection_label')}
+                    label={t('login.custom_connection_label')}
+                    labelClassName={styles.toggleLabel}
+                  />
+                </div>
 
-              {showCustomBase && (
+                {showCustomBase && (
+                  <Input
+                    label={t('login.custom_connection_label')}
+                    placeholder={t('login.custom_connection_placeholder')}
+                    value={apiBase}
+                    onChange={(e) => setApiBase(e.target.value)}
+                    hint={t('login.custom_connection_hint')}
+                  />
+                )}
+
                 <Input
-                  label={t('login.custom_connection_label')}
-                  placeholder={t('login.custom_connection_placeholder')}
-                  value={apiBase}
-                  onChange={(e) => setApiBase(e.target.value)}
-                  hint={t('login.custom_connection_hint')}
+                  autoFocus
+                  label={t('login.management_key_label')}
+                  placeholder={t('login.management_key_placeholder')}
+                  type={showKey ? 'text' : 'password'}
+                  value={managementKey}
+                  onChange={(e) => setManagementKey(e.target.value)}
+                  onKeyDown={handleSubmitKeyDown}
+                  rightElement={
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setShowKey((prev) => !prev)}
+                      aria-label={
+                        showKey
+                          ? t('login.hide_key', { defaultValue: '隐藏密钥' })
+                          : t('login.show_key', { defaultValue: '显示密钥' })
+                      }
+                      title={
+                        showKey
+                          ? t('login.hide_key', { defaultValue: '隐藏密钥' })
+                          : t('login.show_key', { defaultValue: '显示密钥' })
+                      }
+                    >
+                      {showKey ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+                    </button>
+                  }
                 />
-              )}
 
-              <Input
-                autoFocus
-                label={t('login.management_key_label')}
-                placeholder={t('login.management_key_placeholder')}
-                type={showKey ? 'text' : 'password'}
-                value={managementKey}
-                onChange={(e) => setManagementKey(e.target.value)}
-                onKeyDown={handleSubmitKeyDown}
-                rightElement={
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => setShowKey((prev) => !prev)}
-                    aria-label={
-                      showKey
-                        ? t('login.hide_key', { defaultValue: '隐藏密钥' })
-                        : t('login.show_key', { defaultValue: '显示密钥' })
-                    }
-                    title={
-                      showKey
-                        ? t('login.hide_key', { defaultValue: '隐藏密钥' })
-                        : t('login.show_key', { defaultValue: '显示密钥' })
-                    }
-                  >
-                    {showKey ? <IconEyeOff size={16} /> : <IconEye size={16} />}
-                  </button>
-                }
-              />
+                <div className={styles.toggleAdvanced}>
+                  <SelectionCheckbox
+                    checked={rememberPassword}
+                    onChange={setRememberPassword}
+                    ariaLabel={t('login.remember_password_label')}
+                    label={t('login.remember_password_label')}
+                    labelClassName={styles.toggleLabel}
+                  />
+                </div>
 
-              <div className={styles.toggleAdvanced}>
-                <SelectionCheckbox
-                  checked={rememberPassword}
-                  onChange={setRememberPassword}
-                  ariaLabel={t('login.remember_password_label')}
-                  label={t('login.remember_password_label')}
-                  labelClassName={styles.toggleLabel}
-                />
-              </div>
+                <Button fullWidth type="submit" loading={loading}>
+                  {loading ? t('login.submitting') : t('login.submit_button')}
+                </Button>
 
-              <Button fullWidth onClick={handleSubmit} loading={loading}>
-                {loading ? t('login.submitting') : t('login.submit_button')}
-              </Button>
-
-              {error && <div className={styles.errorBox}>{error}</div>}
+                {error && <div className={styles.errorBox}>{error}</div>}
+              </form>
             </div>
           </div>
         )}

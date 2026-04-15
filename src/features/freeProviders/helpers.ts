@@ -18,6 +18,43 @@ import type { FreeProviderCatalogEntry } from '@/generated/freeProviderCatalog';
 
 const normalizeProviderKey = (value: string) => String(value ?? '').trim().toLowerCase();
 
+const MODEL_PROVIDER_SEGMENTS = new Set([
+  'anthropic',
+  'arcee-ai',
+  'cognitivecomputations',
+  'deepseek',
+  'deepseek-ai',
+  'google',
+  'groq',
+  'meta',
+  'meta-llama',
+  'microsoft',
+  'mistral',
+  'mistralai',
+  'moonshotai',
+  'nousresearch',
+  'nvidia',
+  'openai',
+  'qwen',
+  'z-ai',
+]);
+
+const normalizeAliasToken = (value: string): string => {
+  const stripped = String(value ?? '')
+    .trim()
+    .replace(/^models\//i, '')
+    .replace(/:free$/i, '')
+    .replace(/^@(?:cf|hf)\//i, '')
+    .toLowerCase();
+  const parts = stripped.split('/').filter(Boolean);
+  const candidate = parts.length > 1 && MODEL_PROVIDER_SEGMENTS.has(parts[0]) ? parts.slice(1).join('/') : stripped;
+  return candidate
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/\b(instruct|chat|preview|free|model|models)\b/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
 export const createEmptyQuotaStats = (): FreeProviderQuotaStats => ({
   requests: 0,
   tokens: 0,
@@ -150,6 +187,55 @@ export const normalizeFreeProviderModelAliasEntries = (
   });
 
   return normalized;
+};
+
+export const buildDuplicateModelAlias = (modelName: string): string => {
+  const normalized = normalizeAliasToken(modelName);
+  return normalized || String(modelName ?? '').trim();
+};
+
+export const buildAutoLinkedModelAliases = (
+  providers: FreeProviderResolvedItem[],
+  existingAlias: FreeProviderModelAlias = {}
+): FreeProviderModelAlias => {
+  const modelGroups = new Map<string, Array<{ providerId: string; modelName: string }>>();
+
+  providers.forEach((provider) => {
+    provider.state.models.forEach((model) => {
+      const modelName = String(model.name ?? '').trim();
+      if (!modelName) return;
+      const alias = buildDuplicateModelAlias(model.alias || modelName);
+      if (!alias) return;
+      const entries = modelGroups.get(alias) ?? [];
+      entries.push({ providerId: provider.id, modelName });
+      modelGroups.set(alias, entries);
+    });
+  });
+
+  const nextAlias: FreeProviderModelAlias = Object.fromEntries(
+    Object.entries(existingAlias).map(([providerId, entries]) => [
+      providerId,
+      normalizeFreeProviderModelAliasEntries(entries),
+    ])
+  );
+
+  modelGroups.forEach((entries, alias) => {
+    const distinctProviders = new Set(entries.map((entry) => entry.providerId));
+    if (distinctProviders.size < 2) return;
+
+    entries.forEach(({ providerId, modelName }) => {
+      const current = normalizeFreeProviderModelAliasEntries(nextAlias[providerId]);
+      const exists = current.some(
+        (entry) =>
+          entry.name.trim().toLowerCase() === modelName.toLowerCase() &&
+          entry.alias.trim().toLowerCase() === alias.toLowerCase()
+      );
+      if (exists) return;
+      nextAlias[providerId] = [...current, { name: modelName, alias, fork: true }];
+    });
+  });
+
+  return nextAlias;
 };
 
 export const getProviderModelAliasEntries = (
