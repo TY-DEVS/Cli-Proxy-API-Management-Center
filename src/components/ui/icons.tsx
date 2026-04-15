@@ -396,6 +396,19 @@ export function IconSidebarProviders({ size = 20, ...props }: IconProps) {
   );
 }
 
+export function IconSidebarFreeProviders({ size = 20, ...props }: IconProps) {
+  return (
+    <svg {...sidebarSvgProps} width={size} height={size} {...props}>
+      <path d="M4 7h16" />
+      <path d="M4 12h10" />
+      <path d="M4 17h7" />
+      <circle cx="18" cy="12" r="3" />
+      <path d="M18 9v6" />
+      <path d="M15 12h6" />
+    </svg>
+  );
+}
+
 export function IconSidebarAuthFiles({ size = 20, ...props }: IconProps) {
   return (
     <svg {...sidebarSvgProps} width={size} height={size} {...props}>

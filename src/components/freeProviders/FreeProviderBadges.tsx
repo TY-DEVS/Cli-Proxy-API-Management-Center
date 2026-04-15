@@ -1,4 +1,5 @@
-import type { FreeProviderCategory, FreeProviderHealth, FreeProviderStatus, FreeProviderTag } from '@/types/freeProvider';
+import type { FreeProviderHealth, FreeProviderStatus, FreeProviderTag } from '@/types/freeProvider';
+import type { FreeProviderCategory } from '@/generated/freeProviderCatalog';
 import styles from '@/pages/FreeProvidersPage.module.scss';
 
 export function ProviderTypeBadge({ type }: { type: FreeProviderCategory }) {

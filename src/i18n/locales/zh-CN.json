@@ -112,6 +112,7 @@
     "basic_settings": "基础设置",
     "api_keys": "API 密钥",
     "ai_providers": "AI 提供商",
+    "free_providers": "免费 Providers",
     "auth_files": "认证文件",
     "oauth": "OAuth 登录",
     "quota_management": "配额管理",
@@ -151,6 +152,16 @@
     "caring_evening": "今天辛苦了，收尾工作做好哦。",
     "caring_night": "夜深了，别忘了早些休息。",
     "system_overview": "系统概览"
+  },
+  "free_providers": {
+    "title": "Free Providers",
+    "subtitle": "集中管理免费与试用提供商、密钥、健康状态与配额。",
+    "add_provider": "添加 Provider",
+    "sync": "同步 Free Providers",
+    "sync_openai": "同步到 OpenAI Providers",
+    "auto_mode": "自动免费模式",
+    "test_provider": "测试 Provider",
+    "fetch_models": "自动检测模型"
   },
   "basic_settings": {
     "title": "基础设置",

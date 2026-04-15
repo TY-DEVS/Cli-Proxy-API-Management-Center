@@ -17,6 +17,8 @@ import { AuthFilesOAuthModelAliasEditPage } from '@/pages/AuthFilesOAuthModelAli
 import { OAuthPage } from '@/pages/OAuthPage';
 import { QuotaPage } from '@/pages/QuotaPage';
 import { UsagePage } from '@/pages/UsagePage';
+import { FreeProvidersPage } from '@/pages/FreeProvidersPage';
+import { FreeProviderDetailPage } from '@/pages/FreeProviderDetailPage';
 import { ConfigPage } from '@/pages/ConfigPage';
 import { LogsPage } from '@/pages/LogsPage';
 import { SystemPage } from '@/pages/SystemPage';
@@ -67,6 +69,8 @@ const mainRoutes = [
   { path: '/ai-providers/ampcode', element: <AiProvidersAmpcodeEditPage /> },
   { path: '/ai-providers', element: <AiProvidersPage /> },
   { path: '/ai-providers/*', element: <AiProvidersPage /> },
+  { path: '/free-providers', element: <FreeProvidersPage /> },
+  { path: '/free-providers/:providerId', element: <FreeProviderDetailPage /> },
   { path: '/auth-files', element: <AuthFilesPage /> },
   { path: '/auth-files/oauth-excluded', element: <AuthFilesOAuthExcludedEditPage /> },
   { path: '/auth-files/oauth-model-alias', element: <AuthFilesOAuthModelAliasEditPage /> },

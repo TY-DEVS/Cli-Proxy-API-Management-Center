@@ -112,6 +112,7 @@
     "basic_settings": "Основные настройки",
     "api_keys": "API ключи",
     "ai_providers": "Поставщики AI",
+    "free_providers": "Free Providers",
     "auth_files": "Файлы аутентификации",
     "oauth": "OAuth вход",
     "quota_management": "Управление квотами",
@@ -151,6 +152,16 @@
     "caring_evening": "День подходит к концу — финальный рывок.",
     "caring_night": "Поздняя работа? Не забудьте отдохнуть.",
     "system_overview": "Обзор системы"
+  },
+  "free_providers": {
+    "title": "Free Providers",
+    "subtitle": "Централизуйте бесплатных и trial-провайдеров, управляйте ключами, квотами и состоянием.",
+    "add_provider": "Добавить Provider",
+    "sync": "Синхронизировать Free Providers",
+    "sync_openai": "Синхронизировать в OpenAI Providers",
+    "auto_mode": "Авто бесплатный режим",
+    "test_provider": "Тестировать Provider",
+    "fetch_models": "Автоопределение моделей"
   },
   "basic_settings": {
     "title": "Основные настройки",

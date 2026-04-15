@@ -7,7 +7,7 @@ import { Select } from '@/components/ui/Select';
 import { ProviderStatusBadge, ProviderTagList, ProviderTypeBadge } from '@/components/freeProviders';
 import { providersApi } from '@/services/api';
 import { useConfigStore, useFreeProvidersStore, useNotificationStore } from '@/stores';
-import type { FreeProviderFilter } from '@/types/freeProvider';
+import type { FreeProviderFilter, FreeProviderResolvedItem } from '@/types/freeProvider';
 import {
   buildOpenAIProvidersFromFreeProviders,
   computeRoutingRecommendations,
@@ -23,7 +23,7 @@ const FILTER_OPTIONS: Array<{ value: FreeProviderFilter; label: string }> = [
   { value: 'error', label: 'Error' },
 ];
 
-const matchesFilter = (provider: ReturnType<typeof useFreeProvidersStore.getState>['getResolvedProviders'] extends () => Array<infer T> ? T : never, filter: FreeProviderFilter) => {
+const matchesFilter = (provider: FreeProviderResolvedItem, filter: FreeProviderFilter) => {
   const status = getResolvedProviderStatus(provider);
   if (filter === 'all') return true;
   if (filter === 'free' || filter === 'trial') return provider.category === filter;
@@ -39,14 +39,13 @@ export function FreeProvidersPage() {
   const setAutoFreeMode = useFreeProvidersStore((state) => state.setAutoFreeMode);
   const syncCatalog = useFreeProvidersStore((state) => state.syncCatalog);
   const setProviderEnabled = useFreeProvidersStore((state) => state.setProviderEnabled);
-  const providerStates = useFreeProvidersStore((state) => state.providerStates);
   const getResolvedProviders = useFreeProvidersStore((state) => state.getResolvedProviders);
   const config = useConfigStore((state) => state.config);
   const updateConfigValue = useConfigStore((state) => state.updateConfigValue);
   const clearCache = useConfigStore((state) => state.clearCache);
   const [syncing, setSyncing] = useState(false);
 
-  const providers = useMemo(() => getResolvedProviders(), [getResolvedProviders, providerStates]);
+  const providers = getResolvedProviders();
   const filteredProviders = useMemo(
     () => providers.filter((provider) => matchesFilter(provider, filter)),
     [filter, providers]

@@ -112,6 +112,7 @@
     "basic_settings": "Basic Settings",
     "api_keys": "API Keys",
     "ai_providers": "AI Providers",
+    "free_providers": "Free Providers",
     "auth_files": "Auth Files",
     "oauth": "OAuth Login",
     "quota_management": "Quota Management",
@@ -151,6 +152,16 @@
     "caring_evening": "Wrapping up nicely — almost there.",
     "caring_night": "Burning the midnight oil? Don't forget to rest.",
     "system_overview": "System Overview"
+  },
+  "free_providers": {
+    "title": "Free Providers",
+    "subtitle": "Centralize free and trial providers, manage keys, health, and quotas.",
+    "add_provider": "Add Provider",
+    "sync": "Sync Free Providers",
+    "sync_openai": "Sync to OpenAI Providers",
+    "auto_mode": "Auto Free Mode",
+    "test_provider": "Test provider",
+    "fetch_models": "Auto-detect models"
   },
   "basic_settings": {
     "title": "Basic Settings",
