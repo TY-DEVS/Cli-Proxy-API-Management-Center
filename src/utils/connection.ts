@@ -1,4 +1,5 @@
 import { DEFAULT_API_PORT, MANAGEMENT_API_PREFIX } from './constants';
+import { getDefaultApiBase } from '@/config/runtimeConfig';
 
 const DEV_FRONTEND_PORTS = new Set(['5173', '4173', '4174']);
 
@@ -37,6 +38,11 @@ export const computeApiUrl = (base: string): string => {
 };
 
 export const detectApiBaseFromLocation = (): string => {
+  const configuredBase = normalizeApiBase(getDefaultApiBase());
+  if (configuredBase) {
+    return configuredBase;
+  }
+
   try {
     const { protocol, hostname, port } = window.location;
     const normalizedPort = port ? `:${port}` : '';
