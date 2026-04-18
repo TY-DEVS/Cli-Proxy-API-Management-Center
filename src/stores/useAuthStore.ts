@@ -77,6 +77,13 @@ export const useAuthStore = create<AuthStoreState>()(
               return true;
             } catch (error) {
               console.warn('Auto login failed:', error);
+              const status =
+                typeof error === 'object' && error !== null && 'status' in error
+                  ? (error as { status?: number }).status
+                  : undefined;
+              if (status === 401 || status === 403) {
+                localStorage.removeItem('isLoggedIn');
+              }
               return false;
             }
           }

@@ -6,13 +6,40 @@ import { apiClient } from './client';
 import type { Config } from '@/types';
 import { normalizeConfigResponse } from './transformers';
 
+const isHtmlDocument = (value: string): boolean => {
+  const trimmed = value.trim().toLowerCase();
+  return (
+    trimmed.startsWith('<!doctype html') ||
+    trimmed.startsWith('<html') ||
+    trimmed.includes('<head') ||
+    trimmed.includes('<body')
+  );
+};
+
+const ensureManagementConfigPayload = (raw: unknown): unknown => {
+  if (typeof raw === 'string') {
+    if (isHtmlDocument(raw)) {
+      throw new Error(
+        'Invalid management API response: received HTML instead of CLI Proxy API config JSON. Check that the API address points to the backend management API, not the Vite dev server.'
+      );
+    }
+    throw new Error('Invalid management API response: expected JSON config payload.');
+  }
+
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error('Invalid management API response: expected config object.');
+  }
+
+  return raw;
+};
+
 export const configApi = {
   /**
    * 获取配置（会进行字段规范化）
    */
   async getConfig(): Promise<Config> {
     const raw = await apiClient.get('/config');
-    return normalizeConfigResponse(raw);
+    return normalizeConfigResponse(ensureManagementConfigPayload(raw));
   },
 
   /**

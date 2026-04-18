@@ -97,7 +97,11 @@ class ApiClient {
 
         // 添加认证头
         if (this.managementKey) {
-          config.headers.Authorization = `Bearer ${this.managementKey}`;
+          const managementKey = this.managementKey.trim();
+          if (managementKey) {
+            config.headers.Authorization = `Bearer ${managementKey}`;
+            config.headers['X-Management-Key'] = managementKey;
+          }
         }
 
         return config;

@@ -31,6 +31,19 @@ function getLocalizedErrorMessage(error: unknown, t: (key: string) => string): s
         : typeof error === 'string'
           ? error
           : '';
+  const explicitServerMessage =
+    message &&
+    !message.toLowerCase().includes('request failed') &&
+    !message.toLowerCase().includes('network error')
+      ? message
+      : '';
+
+  if (status === 401 && explicitServerMessage) {
+    return explicitServerMessage;
+  }
+  if (status === 403 && explicitServerMessage) {
+    return explicitServerMessage;
+  }
 
   // 根据 HTTP 状态码判断
   if (status === 401) {
