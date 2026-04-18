@@ -1,0 +1,23 @@
+services:
+  cli-proxy-api:
+    image: ${CLI_PROXY_IMAGE:-ghcr.io/router-for-me/cliproxyapi:latest}
+    container_name: cli-proxy-api
+    ports:
+      - "${CLI_PROXY_HOST_PORT:-8317}:${CLI_PROXY_PORT:-8317}"
+    volumes:
+      - ${CLI_PROXY_CONFIG_PATH:-./docker/backend/config.yaml}:/CLIProxyAPI/config.yaml
+      - ${CLI_PROXY_AUTH_DIR:-./docker/backend/auth}:/CLIProxyAPI/auth
+    restart: unless-stopped
+
+  webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - cli-proxy-api
+    ports:
+      - "${APP_HOST_PORT:-8080}:80"
+    environment:
+      APP_PORT: ${APP_PORT:-80}
+      APP_DEFAULT_API_BASE: ${APP_DEFAULT_API_BASE:-http://localhost:${CLI_PROXY_HOST_PORT:-8317}}
+    restart: unless-stopped
