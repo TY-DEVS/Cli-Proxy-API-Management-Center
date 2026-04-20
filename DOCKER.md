@@ -11,6 +11,7 @@ This project provides a two-container stack:
 - Compose stack: [docker-compose.yml](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/docker-compose.yml)
 - Production stack: [docker-compose.production.yml](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/docker-compose.production.yml)
 - Coolify private-repo stack: [docker-compose.coolify-private.yml](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/docker-compose.coolify-private.yml)
+- Coolify same-repo stack: [docker-compose.coolify-monorepo.yml](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/docker-compose.coolify-monorepo.yml)
 - Backend config sample: [docker/backend/config.yaml](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/docker/backend/config.yaml)
 
 ## Main variables
@@ -73,6 +74,37 @@ Recommended Coolify setup:
 4. Regular variables: the remaining `CLI_PROXY_*` and `APP_*`
 
 An example file is available at [.env.coolify-private.example](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/.env.coolify-private.example).
+
+## Coolify without extra token
+
+If you do not want any extra token in Coolify, then Docker must not clone a second private repository during the build.
+
+That means your backend source must already be inside the same repository that Coolify clones for this app, for example:
+
+1. committed directly under `./CLIProxyAPI-main`
+2. added via `git subtree`
+3. vendored/copied into a subfolder
+
+Then use [docker-compose.coolify-monorepo.yml](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/docker-compose.coolify-monorepo.yml) with these variables:
+
+```env
+CLI_PROXY_BUILD_CONTEXT=./CLIProxyAPI-main
+CLI_PROXY_LOCAL_IMAGE=cli-proxy-api:production
+CLI_PROXY_VERSION=main
+CLI_PROXY_COMMIT=main
+CLI_PROXY_BUILD_DATE=2026-04-20
+CLI_PROXY_HOST_PORT=8317
+CLI_PROXY_PORT=8317
+CLI_PROXY_CONFIG_PATH=./docker/backend/config.yaml
+CLI_PROXY_AUTH_DIR=./docker/backend/auth
+APP_HOST_PORT=8080
+APP_PORT=80
+APP_DEFAULT_API_BASE=http://localhost:8317
+```
+
+Example environment file: [.env.coolify-monorepo.example](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/.env.coolify-monorepo.example)
+
+Important: connecting Coolify to GitHub only gives Coolify access to clone the repository configured for this application. It does not automatically make Docker build contexts from another private repository work without credentials.
 
 ## Local backend build
 

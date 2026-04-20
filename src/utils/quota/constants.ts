@@ -197,14 +197,16 @@ export const CODEX_REQUEST_HEADERS = {
 };
 
 // Amazon Q Developer / CodeWhisperer runtime.
-// The real request is performed by CLIProxyAPI because it needs AWS SSO/OIDC cache access
-// and AWS bearer/SigV4-compatible handling discovered from the Amazon Q VS Code extension.
-export const AMAZON_Q_USAGE_URL = 'https://codewhisperer.us-east-1.amazonaws.com/';
+// The VS Code extension bundle shows CodeWhispererRuntimeClient calling an
+// Elastic Gumby frontend service with GET requests for quota/model discovery.
+export const AMAZON_Q_ENDPOINT_HOST_TEMPLATE = 'https://elasticgumbyfrontendservice.{region}.amazonaws.com';
+
+export const AMAZON_Q_LIST_AVAILABLE_MODELS_PATH = '/ListAvailableModels';
+
+export const AMAZON_Q_GET_USAGE_LIMITS_PATH = '/getUsageLimits';
 
 export const AMAZON_Q_REQUEST_HEADERS = {
   Authorization: 'Bearer $TOKEN$',
-  'Content-Type': 'application/x-amz-json-1.0',
-  'X-Amz-Target': 'AmazonCodeWhispererService.GetUsageLimits',
 };
 
 // Kimi API configuration

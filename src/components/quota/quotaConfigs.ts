@@ -43,6 +43,9 @@ import {
   CODEX_USAGE_URL,
   CODEX_REQUEST_HEADERS,
   AMAZON_Q_USAGE_URL,
+  AMAZON_Q_ENDPOINT_HOST_TEMPLATE,
+  AMAZON_Q_GET_USAGE_LIMITS_PATH,
+  AMAZON_Q_LIST_AVAILABLE_MODELS_PATH,
   AMAZON_Q_REQUEST_HEADERS,
   GEMINI_CLI_QUOTA_URL,
   GEMINI_CLI_CODE_ASSIST_URL,
@@ -1366,32 +1369,88 @@ const fetchAmazonQuota = async (
     throw new Error(t('amazon_quota.missing_auth_index'));
   }
 
-  const result = await apiCallApi.request({
-    authIndex,
-    method: 'POST',
-    url: `${AMAZON_Q_USAGE_URL}?origin=IDE`,
-    header: { ...AMAZON_Q_REQUEST_HEADERS },
-    data: JSON.stringify({
-      origin: 'IDE',
-      isEmailRequired: true,
-    }),
-  });
+  const rawRegion = file.region ?? file['region'] ?? file.metadata?.region;
+  const region =
+    typeof rawRegion === 'string' && rawRegion.trim() ? rawRegion.trim() : 'us-east-1';
+  const endpointBase = AMAZON_Q_ENDPOINT_HOST_TEMPLATE.replace('{region}', region);
 
-  if (result.statusCode < 200 || result.statusCode >= 300) {
-    throw createStatusError(getApiCallErrorMessage(result), result.statusCode);
+  const requestVariants = [
+    {
+      label: 'list-available-models',
+      request: {
+        authIndex,
+        method: 'GET',
+        url: `${endpointBase}${AMAZON_Q_LIST_AVAILABLE_MODELS_PATH}`,
+        header: { ...AMAZON_Q_REQUEST_HEADERS },
+      },
+    },
+    {
+      label: 'list-available-models-origin',
+      request: {
+        authIndex,
+        method: 'GET',
+        url: `${endpointBase}${AMAZON_Q_LIST_AVAILABLE_MODELS_PATH}?origin=IDE`,
+        header: { ...AMAZON_Q_REQUEST_HEADERS },
+      },
+    },
+    {
+      label: 'get-usage-limits',
+      request: {
+        authIndex,
+        method: 'GET',
+        url: `${endpointBase}${AMAZON_Q_GET_USAGE_LIMITS_PATH}`,
+        header: { ...AMAZON_Q_REQUEST_HEADERS },
+      },
+    },
+    {
+      label: 'get-usage-limits-origin',
+      request: {
+        authIndex,
+        method: 'GET',
+        url: `${endpointBase}${AMAZON_Q_GET_USAGE_LIMITS_PATH}?origin=IDE`,
+        header: { ...AMAZON_Q_REQUEST_HEADERS },
+      },
+    },
+  ] as const;
+
+  let lastError = '';
+  let lastStatus: number | undefined;
+
+  for (const variant of requestVariants) {
+    try {
+      const result = await apiCallApi.request(variant.request);
+
+      if (result.statusCode < 200 || result.statusCode >= 300) {
+        lastError = `[${variant.label}] ${getApiCallErrorMessage(result)}`;
+        lastStatus = result.statusCode;
+        continue;
+      }
+
+      const payload = parseAmazonUsagePayload(result.body ?? result.bodyText);
+      if (!payload) {
+        lastError = `[${variant.label}] ${t('amazon_quota.empty_data')}`;
+        continue;
+      }
+
+      const rows = buildAmazonQuotaRows(payload);
+      if (rows.length > 0) {
+        return rows;
+      }
+
+      lastError = `[${variant.label}] ${t('amazon_quota.empty_data')}`;
+    } catch (error: unknown) {
+      lastError =
+        error instanceof Error
+          ? `[${variant.label}] ${error.message}`
+          : `[${variant.label}] ${t('common.unknown_error')}`;
+      const status = getStatusFromError(error);
+      if (status) {
+        lastStatus = status;
+      }
+    }
   }
 
-  const payload = parseAmazonUsagePayload(result.body ?? result.bodyText);
-  if (!payload) {
-    throw new Error(t('amazon_quota.empty_data'));
-  }
-
-  const rows = buildAmazonQuotaRows(payload);
-  if (rows.length === 0) {
-    throw new Error(t('amazon_quota.empty_data'));
-  }
-
-  return rows;
+  throw createStatusError(lastError || t('amazon_quota.empty_data'), lastStatus);
 };
 
 const renderAmazonItems = (

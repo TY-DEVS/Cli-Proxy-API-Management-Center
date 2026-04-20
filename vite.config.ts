@@ -43,6 +43,17 @@ export default defineConfig({
       removeViteModuleLoader: true
     })
   ],
+  server: {
+    host: 'localhost',
+    strictPort: true,
+    hmr: {
+      host: 'localhost'
+    }
+  },
+  preview: {
+    host: 'localhost',
+    strictPort: true
+  },
   define: {
     __APP_VERSION__: JSON.stringify(getVersion())
   },
