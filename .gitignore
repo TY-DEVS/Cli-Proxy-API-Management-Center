@@ -34,3 +34,7 @@ settings.local.json
 *.sw?
 .playwright-mcp/
 *.txt
+
+
+pnpm-lock.yaml
+pnpm-workspace.yaml
