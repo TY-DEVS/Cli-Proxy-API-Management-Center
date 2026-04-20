@@ -42,10 +42,6 @@ import {
   CLAUDE_USAGE_WINDOW_KEYS,
   CODEX_USAGE_URL,
   CODEX_REQUEST_HEADERS,
-  AMAZON_Q_ENDPOINT_HOST_TEMPLATE,
-  AMAZON_Q_GET_USAGE_LIMITS_PATH,
-  AMAZON_Q_LIST_AVAILABLE_MODELS_PATH,
-  AMAZON_Q_REQUEST_HEADERS,
   GEMINI_CLI_QUOTA_URL,
   GEMINI_CLI_CODE_ASSIST_URL,
   GEMINI_CLI_REQUEST_HEADERS,
@@ -84,6 +80,7 @@ import {
   isKimiFile,
   isRuntimeOnlyAuthFile,
 } from '@/utils/quota';
+import { buildAmazonQuotaRequestVariants } from '@/utils/quota/amazonContracts';
 import { normalizeAuthIndex } from '@/utils/usage';
 import type { QuotaRenderHelpers } from './QuotaCard';
 import styles from '@/pages/QuotaPage.module.scss';
@@ -1375,94 +1372,7 @@ const fetchAmazonQuota = async (
   const rawRegion = file.region ?? file['region'] ?? metadata?.region;
   const region =
     typeof rawRegion === 'string' && rawRegion.trim() ? rawRegion.trim() : 'us-east-1';
-  const endpointBase = AMAZON_Q_ENDPOINT_HOST_TEMPLATE.replace('{region}', region);
-
-  const requestVariants = [
-    {
-      label: 'list-available-models',
-      request: {
-        authIndex,
-        method: 'GET',
-        url: `${endpointBase}${AMAZON_Q_LIST_AVAILABLE_MODELS_PATH}`,
-        header: { ...AMAZON_Q_REQUEST_HEADERS },
-      },
-    },
-    {
-      label: 'list-available-models-origin',
-      request: {
-        authIndex,
-        method: 'GET',
-        url: `${endpointBase}${AMAZON_Q_LIST_AVAILABLE_MODELS_PATH}?origin=IDE`,
-        header: { ...AMAZON_Q_REQUEST_HEADERS },
-      },
-    },
-    {
-      label: 'list-available-models-origin-optout-false',
-      request: {
-        authIndex,
-        method: 'GET',
-        url: `${endpointBase}${AMAZON_Q_LIST_AVAILABLE_MODELS_PATH}?origin=IDE`,
-        header: {
-          ...AMAZON_Q_REQUEST_HEADERS,
-          'x-amzn-codewhisperer-optout': 'false',
-        },
-      },
-    },
-    {
-      label: 'list-available-models-origin-external-idp',
-      request: {
-        authIndex,
-        method: 'GET',
-        url: `${endpointBase}${AMAZON_Q_LIST_AVAILABLE_MODELS_PATH}?origin=IDE`,
-        header: {
-          ...AMAZON_Q_REQUEST_HEADERS,
-          TokenType: 'EXTERNAL_IDP',
-        },
-      },
-    },
-    {
-      label: 'get-usage-limits',
-      request: {
-        authIndex,
-        method: 'GET',
-        url: `${endpointBase}${AMAZON_Q_GET_USAGE_LIMITS_PATH}`,
-        header: { ...AMAZON_Q_REQUEST_HEADERS },
-      },
-    },
-    {
-      label: 'get-usage-limits-origin',
-      request: {
-        authIndex,
-        method: 'GET',
-        url: `${endpointBase}${AMAZON_Q_GET_USAGE_LIMITS_PATH}?origin=IDE`,
-        header: { ...AMAZON_Q_REQUEST_HEADERS },
-      },
-    },
-    {
-      label: 'get-usage-limits-origin-optout-false',
-      request: {
-        authIndex,
-        method: 'GET',
-        url: `${endpointBase}${AMAZON_Q_GET_USAGE_LIMITS_PATH}?origin=IDE`,
-        header: {
-          ...AMAZON_Q_REQUEST_HEADERS,
-          'x-amzn-codewhisperer-optout': 'false',
-        },
-      },
-    },
-    {
-      label: 'get-usage-limits-origin-external-idp',
-      request: {
-        authIndex,
-        method: 'GET',
-        url: `${endpointBase}${AMAZON_Q_GET_USAGE_LIMITS_PATH}?origin=IDE`,
-        header: {
-          ...AMAZON_Q_REQUEST_HEADERS,
-          TokenType: 'EXTERNAL_IDP',
-        },
-      },
-    },
-  ] as const;
+  const requestVariants = buildAmazonQuotaRequestVariants(authIndex, region);
 
   const debugLines: string[] = [];
   let lastError = '';

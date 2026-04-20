@@ -196,19 +196,6 @@ export const CODEX_REQUEST_HEADERS = {
   'User-Agent': 'codex_cli_rs/0.76.0 (Debian 13.0.0; x86_64) WindowsTerminal',
 };
 
-// Amazon Q Developer / CodeWhisperer runtime.
-// The VS Code extension bundle shows CodeWhispererRuntimeClient calling an
-// Elastic Gumby frontend service with GET requests for quota/model discovery.
-export const AMAZON_Q_ENDPOINT_HOST_TEMPLATE = 'https://elasticgumbyfrontendservice.{region}.amazonaws.com';
-
-export const AMAZON_Q_LIST_AVAILABLE_MODELS_PATH = '/ListAvailableModels';
-
-export const AMAZON_Q_GET_USAGE_LIMITS_PATH = '/getUsageLimits';
-
-export const AMAZON_Q_REQUEST_HEADERS = {
-  Authorization: 'Bearer $TOKEN$',
-};
-
 // Kimi API configuration
 export const KIMI_USAGE_URL = 'https://api.kimi.com/coding/v1/usages';
 
