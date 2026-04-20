@@ -1,13 +1,6 @@
 services:
   cli-proxy-api:
-    build:
-      context: ${CLI_PROXY_BUILD_CONTEXT:-../CLIProxyAPI-main}
-      dockerfile: Dockerfile
-      args:
-        VERSION: ${CLI_PROXY_VERSION:-dev}
-        COMMIT: ${CLI_PROXY_COMMIT:-none}
-        BUILD_DATE: ${CLI_PROXY_BUILD_DATE:-unknown}
-    image: ${CLI_PROXY_LOCAL_IMAGE:-cli-proxy-api:local}
+    image: ${CLI_PROXY_IMAGE:-ghcr.io/router-for-me/cliproxyapi:latest}
     container_name: cli-proxy-api
     ports:
       - "${CLI_PROXY_HOST_PORT:-8317}:${CLI_PROXY_PORT:-8317}"

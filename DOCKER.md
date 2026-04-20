@@ -13,11 +13,12 @@ This project provides a two-container stack:
 
 ## Main variables
 
-- `CLI_PROXY_BUILD_CONTEXT`: path to your local CLI Proxy API repository (for example `../CLIProxyAPI-main`)
-- `CLI_PROXY_LOCAL_IMAGE`: local image tag produced by `docker compose build`
-- `CLI_PROXY_VERSION`: backend build arg
-- `CLI_PROXY_COMMIT`: backend build arg
-- `CLI_PROXY_BUILD_DATE`: backend build arg
+- `CLI_PROXY_IMAGE`: backend image used by the default deployment stack
+- `CLI_PROXY_BUILD_CONTEXT`: backend Git or local build context used only by build overrides
+- `CLI_PROXY_LOCAL_IMAGE`: local image tag produced by backend build overrides
+- `CLI_PROXY_VERSION`: backend build arg for build overrides
+- `CLI_PROXY_COMMIT`: backend build arg for build overrides
+- `CLI_PROXY_BUILD_DATE`: backend build arg for build overrides
 - `CLI_PROXY_HOST_PORT`: host port exposing the backend
 - `CLI_PROXY_PORT`: backend port inside the container
 - `CLI_PROXY_CONFIG_PATH`: local config file mounted into backend
@@ -26,38 +27,44 @@ This project provides a two-container stack:
 - `APP_PORT`: Nginx listen port inside the web UI container
 - `APP_DEFAULT_API_BASE`: API base injected into the frontend at container startup, as seen by the browser
 
-`CLI_PROXY_BUILD_CONTEXT` can also be a Git build context. This is the simplest production option if you want to deploy your own fork or a pinned upstream tag instead of building from a local checkout.
+The base `docker-compose.yml` uses `CLI_PROXY_IMAGE`, which is the safest option for Coolify and similar platforms because it does not need to clone a second repository during deployment.
 
 ## Start
 
 ```bash
-docker compose up --build
+docker compose up -d
+```
+
+## Local backend build
+
+If you want to build the backend from your local checkout during development:
+
+```bash
+docker compose --env-file .env -f docker-compose.yml -f docker-compose.local-backend.yml up --build
 ```
 
 ## Production with your own fork
 
-If you do not want to build the backend from `../CLIProxyAPI-main`, you can build it directly from your own GitHub fork or from a pinned tag/commit.
+If you want to build the backend from your own GitHub fork or from a pinned tag/commit, use the production override.
 
 Example fork on `main`:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.production.yml up --build -d
-```
-
-Using the prepared production environment file:
 
 ```bash
 docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.production.yml up --build -d
 ```
 
+This mode requires the deployment environment to be able to clone that Git repository. It will fail on platforms that do not have access to your private fork.
+
+Using the prepared production environment file for the default image-based deployment:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.yml up -d
+```
+
 With this environment:
 
 ```env
-CLI_PROXY_BUILD_CONTEXT=https://github.com/<your-github-user>/CLIProxyAPI.git#main
-CLI_PROXY_LOCAL_IMAGE=cli-proxy-api:production
-CLI_PROXY_VERSION=main
-CLI_PROXY_COMMIT=main
-CLI_PROXY_BUILD_DATE=2026-04-20
+CLI_PROXY_IMAGE=ghcr.io/router-for-me/cliproxyapi:latest
 ```
 
 Pinned upstream release example:
@@ -70,7 +77,7 @@ CLI_PROXY_COMMIT=v6.9.30
 CLI_PROXY_BUILD_DATE=2026-04-20
 ```
 
-This keeps the Web UI repository unchanged while letting you choose exactly which backend source is used in production.
+This keeps the default deployment compatible with Coolify while still allowing explicit backend build overrides when you control the environment.
 
 UI:
 
@@ -87,16 +94,18 @@ http://localhost:8317/v0/management
 ## First use
 
 1. Edit [docker/backend/config.yaml](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/docker/backend/config.yaml) and replace `change-me` with your real management key.
-2. If needed, update [.env](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/.env) ports, build context, or build args.
-3. For production, point `CLI_PROXY_BUILD_CONTEXT` to your fork or to a pinned Git tag/commit.
-4. Start the stack with `docker compose up --build` or with `docker compose -f docker-compose.yml -f docker-compose.production.yml up --build -d`.
-5. Open the UI and log in with the same management key.
+2. If needed, update [.env](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/.env) or [.env.production](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/.env.production) ports and backend source.
+3. For Coolify or any hosted deployment, prefer `CLI_PROXY_IMAGE` in the base stack.
+4. Use `docker-compose.local-backend.yml` only when building from a local checkout.
+5. Use `docker-compose.production.yml` only when the deployment environment can clone your fork.
+6. Open the UI and log in with the same management key.
 
 ## Notes
 
 - The frontend does not hardcode the backend URL in the bundle. `APP_DEFAULT_API_BASE` is written to `app-config.js` when the container starts.
 - In a browser, `cli-proxy-api` is not a valid hostname unless your DNS resolves it. The default value therefore points to `http://localhost:8317`.
-- The backend service uses the backend `Dockerfile` referenced by `CLI_PROXY_BUILD_CONTEXT`, whether that is a local path or a Git repository URL.
+- The default stack pulls `CLI_PROXY_IMAGE` and does not build the backend.
+- Backend builds are opt-in through `docker-compose.local-backend.yml` or `docker-compose.production.yml`.
 - Both services include healthchecks, and `webui` waits until `cli-proxy-api` is healthy.
 - The sample backend config keeps `disable-control-panel: true` because the UI is served by the separate `webui` container.
 - Auth files persist in [docker/backend/auth](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/docker/backend/auth).

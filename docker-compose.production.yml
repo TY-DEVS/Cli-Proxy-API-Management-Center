@@ -3,4 +3,8 @@ services:
     build:
       context: ${CLI_PROXY_BUILD_CONTEXT:-https://github.com/Aminetwiti/CLIProxyAPI-main.git#main}
       dockerfile: Dockerfile
+      args:
+        VERSION: ${CLI_PROXY_VERSION:-main}
+        COMMIT: ${CLI_PROXY_COMMIT:-main}
+        BUILD_DATE: ${CLI_PROXY_BUILD_DATE:-2026-04-20}
     image: ${CLI_PROXY_LOCAL_IMAGE:-cli-proxy-api:production}

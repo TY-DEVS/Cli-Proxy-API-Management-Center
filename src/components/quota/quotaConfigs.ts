@@ -1404,21 +1404,32 @@ const renderAmazonItems = (
   }
 
   return rows.map((row) => {
+    const fraction = row.remainingFraction;
     const limit = row.limit;
     const used = row.used;
     const remaining =
-      limit > 0
-        ? Math.max(0, Math.min(100, Math.round(((limit - used) / limit) * 100)))
-        : used > 0
-          ? 0
-          : null;
+      fraction !== undefined && fraction !== null
+        ? Math.max(0, Math.min(100, Math.round(fraction * 100)))
+        : limit > 0
+          ? Math.max(0, Math.min(100, Math.round(((limit - used) / limit) * 100)))
+          : used > 0
+            ? 0
+            : null;
     const percentLabel = remaining === null ? '--' : `${remaining}%`;
     const rowLabel = row.labelKey
       ? t(row.labelKey, (row.labelParams ?? {}) as Record<string, string | number>)
       : row.label ?? '';
-    const resetLabel = row.resetHint
-      ? t('amazon_quota.reset_hint', { hint: row.resetHint })
-      : null;
+    const resetLabel = row.resetTime
+      ? formatQuotaResetTime(row.resetTime)
+      : row.resetHint
+        ? t('amazon_quota.reset_hint', { hint: row.resetHint })
+        : null;
+    const amountLabel =
+      fraction !== undefined && fraction !== null
+        ? null
+        : limit > 0
+          ? `${used} / ${limit}`
+          : null;
 
     return h(
       'div',
@@ -1431,8 +1442,8 @@ const renderAmazonItems = (
           'div',
           { className: styleMap.quotaMeta },
           h('span', { className: styleMap.quotaPercent }, percentLabel),
-          limit > 0
-            ? h('span', { className: styleMap.quotaAmount }, `${used} / ${limit}`)
+          amountLabel
+            ? h('span', { className: styleMap.quotaAmount }, amountLabel)
             : null,
           resetLabel
             ? h('span', { className: styleMap.quotaReset }, resetLabel)

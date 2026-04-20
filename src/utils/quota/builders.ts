@@ -3,7 +3,9 @@
  */
 
 import type {
+  AmazonModelsPayload,
   AmazonQuotaRow,
+  AmazonQuotaModelInfo,
   AmazonUsageLimitItem,
   AmazonUsagePayload,
   AntigravityQuotaGroup,
@@ -411,6 +413,55 @@ export function buildKimiQuotaRows(payload: KimiUsagePayload): KimiQuotaRow[] {
 
 const AMAZON_USAGE_FALLBACK_KEY = 'amazon_quota.usage_limit';
 
+function getAmazonQuotaInfo(entry?: AmazonQuotaModelInfo): {
+  remainingFraction: number | null;
+  resetTime?: string;
+  displayName?: string;
+} {
+  if (!entry) {
+    return { remainingFraction: null };
+  }
+
+  const quotaInfo = entry.quotaInfo ?? entry.quota_info ?? {};
+  const remainingValue =
+    quotaInfo.remainingFraction ?? quotaInfo.remaining_fraction ?? quotaInfo.remaining;
+  const remainingFraction = normalizeQuotaFraction(remainingValue);
+  const resetValue = quotaInfo.resetTime ?? quotaInfo.reset_time;
+  const resetTime = typeof resetValue === 'string' ? resetValue : undefined;
+  const displayName = typeof entry.displayName === 'string' ? entry.displayName : undefined;
+
+  return {
+    remainingFraction,
+    resetTime,
+    displayName,
+  };
+}
+
+function buildAmazonModelQuotaRows(models: AmazonModelsPayload): AmazonQuotaRow[] {
+  const rows = Object.entries(models)
+    .map<AmazonQuotaRow | null>(([modelId, entry]) => {
+      const info = getAmazonQuotaInfo(entry);
+      const remainingFraction = info.remainingFraction ?? (info.resetTime ? 0 : null);
+      if (remainingFraction === null) {
+        return null;
+      }
+
+      return {
+        id: `amazon-model-${modelId}`,
+        label: info.displayName || modelId,
+        used: 0,
+        limit: 100,
+        remainingFraction,
+        resetTime: info.resetTime,
+        resetHint: undefined,
+      };
+    })
+    .filter((row): row is AmazonQuotaRow => row !== null);
+
+  rows.sort((a, b) => (a.label || a.id).localeCompare(b.label || b.id));
+  return rows;
+}
+
 function resolveAmazonLimitItems(payload: AmazonUsagePayload): AmazonUsageLimitItem[] {
   const fromPayload =
     payload.usageLimits ?? payload.usage_limits ?? payload.limits ?? payload.quotas ?? [];
@@ -467,6 +518,23 @@ function amazonResetHint(item: Record<string, unknown>): string | undefined {
 }
 
 export function buildAmazonQuotaRows(payload: AmazonUsagePayload): AmazonQuotaRow[] {
+  if (payload.models && typeof payload.models === 'object' && !Array.isArray(payload.models)) {
+    const modelRows = buildAmazonModelQuotaRows(payload.models);
+    if (modelRows.length > 0) {
+      return modelRows;
+    }
+  }
+
+  if (payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+    const nested = payload.data as Record<string, unknown>;
+    if (nested.models && typeof nested.models === 'object' && !Array.isArray(nested.models)) {
+      const modelRows = buildAmazonModelQuotaRows(nested.models as AmazonModelsPayload);
+      if (modelRows.length > 0) {
+        return modelRows;
+      }
+    }
+  }
+
   const rows: AmazonQuotaRow[] = [];
   const items = resolveAmazonLimitItems(payload);
   const fallbackItem =
@@ -510,6 +578,8 @@ export function buildAmazonQuotaRows(payload: AmazonUsagePayload): AmazonQuotaRo
           },
       used: normalizedUsed,
       limit: Math.max(0, normalizedLimit),
+      remainingFraction: null,
+      resetTime: undefined,
       resetHint: amazonResetHint(raw),
     });
   });

@@ -313,11 +313,32 @@ export interface AmazonUsageLimitItem {
   ttl?: number | string;
 }
 
+export interface AmazonQuotaModelInfo {
+  displayName?: string;
+  quotaInfo?: {
+    remainingFraction?: number | string;
+    remaining_fraction?: number | string;
+    remaining?: number | string;
+    resetTime?: string;
+    reset_time?: string;
+  };
+  quota_info?: {
+    remainingFraction?: number | string;
+    remaining_fraction?: number | string;
+    remaining?: number | string;
+    resetTime?: string;
+    reset_time?: string;
+  };
+}
+
+export type AmazonModelsPayload = Record<string, AmazonQuotaModelInfo>;
+
 export interface AmazonUsagePayload {
   usageLimits?: AmazonUsageLimitItem[];
   usage_limits?: AmazonUsageLimitItem[];
   limits?: AmazonUsageLimitItem[];
   quotas?: AmazonUsageLimitItem[];
+  models?: AmazonModelsPayload;
   data?: unknown;
 }
 
@@ -345,6 +366,8 @@ export interface AmazonQuotaRow {
   labelParams?: Record<string, string | number>;
   used: number;
   limit: number;
+  remainingFraction?: number | null;
+  resetTime?: string;
   resetHint?: string;
 }
 
