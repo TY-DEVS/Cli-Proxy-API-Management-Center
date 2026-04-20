@@ -46,31 +46,29 @@ docker compose --env-file .env.production -f docker-compose.production.yml up -d
 
 ## Coolify private repo
 
-If you want Coolify to build the backend directly from your private repo `https://github.com/Aminetwiti/CLIProxyAPI-main`, use [docker-compose.coolify-private.yml](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/docker-compose.coolify-private.yml).
+If you want Coolify to build the backend directly from a separate repo such as `https://github.com/TY-DEVS/CLIProxyAPI-main`, use [docker-compose.coolify-private.yml](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/docker-compose.coolify-private.yml).
 
 Exact Coolify variables to create:
 
 ```env
-GITHUB_TOKEN=<token with read access to Aminetwiti/CLIProxyAPI-main>
-CLI_PROXY_BUILD_CONTEXT=https://x-access-token:<token with read access to Aminetwiti/CLIProxyAPI-main>@github.com/Aminetwiti/CLIProxyAPI-main.git#main
+GITHUB_TOKEN=<token with read access to TY-DEVS/CLIProxyAPI-main>
+CLI_PROXY_BUILD_CONTEXT=https://x-access-token:<token with read access to TY-DEVS/CLIProxyAPI-main>@github.com/TY-DEVS/CLIProxyAPI-main.git#main
 CLI_PROXY_LOCAL_IMAGE=cli-proxy-api:production
 CLI_PROXY_VERSION=main
 CLI_PROXY_COMMIT=main
 CLI_PROXY_BUILD_DATE=2026-04-20
-CLI_PROXY_HOST_PORT=8317
 CLI_PROXY_PORT=8317
 CLI_PROXY_CONFIG_PATH=./docker/backend/config.yaml
 CLI_PROXY_AUTH_DIR=./docker/backend/auth
-APP_HOST_PORT=8080
 APP_PORT=80
-APP_DEFAULT_API_BASE=http://localhost:8317
+APP_DEFAULT_API_BASE=https://your-backend-domain.example.com
 ```
 
 Recommended Coolify setup:
 
 1. Compose file: `docker-compose.coolify-private.yml`
 2. Secret: `GITHUB_TOKEN`
-3. Secret: `CLI_PROXY_BUILD_CONTEXT`
+3. Secret: `CLI_PROXY_BUILD_CONTEXT` if the backend repo is private
 4. Regular variables: the remaining `CLI_PROXY_*` and `APP_*`
 
 An example file is available at [.env.coolify-private.example](/c:/Users/amine/Desktop/Nouveau%20dossier/Cli-Proxy-API-Management-Center/.env.coolify-private.example).

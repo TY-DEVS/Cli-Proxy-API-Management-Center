@@ -4,7 +4,11 @@
 			"path": "."
 		},
 		{
+			"path": "../CLIProxyAPI-main"
+		},
+		{
 			"path": "../../../.vscode/extensions/amazonwebservices.amazon-q-vscode-2.0.0"
 		}
-	]
+	],
+	"settings": {}
 }
