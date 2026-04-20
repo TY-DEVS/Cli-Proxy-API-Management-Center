@@ -1,6 +1,6 @@
 services:
   cli-proxy-api:
-    image: ${CLI_PROXY_IMAGE:-ghcr.io/router-for-me/cliproxyapi:latest}
+    image: ${CLI_PROXY_IMAGE:-eceasy/cli-proxy-api:latest}
     container_name: cli-proxy-api
     ports:
       - "${CLI_PROXY_HOST_PORT:-8317}:${CLI_PROXY_PORT:-8317}"

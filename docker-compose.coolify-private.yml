@@ -1,6 +1,13 @@
 services:
   cli-proxy-api:
-    image: ${CLI_PROXY_IMAGE:-eceasy/cli-proxy-api:latest}
+    build:
+      context: ${CLI_PROXY_BUILD_CONTEXT}
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${CLI_PROXY_VERSION:-main}
+        COMMIT: ${CLI_PROXY_COMMIT:-main}
+        BUILD_DATE: ${CLI_PROXY_BUILD_DATE:-2026-04-20}
+    image: ${CLI_PROXY_LOCAL_IMAGE:-cli-proxy-api:production}
     container_name: cli-proxy-api
     ports:
       - "${CLI_PROXY_HOST_PORT:-8317}:${CLI_PROXY_PORT:-8317}"
