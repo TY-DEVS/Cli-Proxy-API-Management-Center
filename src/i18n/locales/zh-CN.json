@@ -939,6 +939,7 @@
     "amazon_oauth_status_success": "认证成功！",
     "amazon_oauth_status_error": "认证失败:",
     "amazon_oauth_start_error": "启动 Amazon OAuth 失败:",
+    "amazon_oauth_unsupported_hint": "当前连接的 CLI Proxy API 构建版本不支持 Amazon OAuth，请升级后端到包含该管理路由的版本。",
     "amazon_oauth_polling_error": "检查认证状态失败:",
     "oauth_callback_label": "回调 URL",
     "oauth_callback_placeholder": "http://localhost:1455/auth/callback?code=...&state=...",

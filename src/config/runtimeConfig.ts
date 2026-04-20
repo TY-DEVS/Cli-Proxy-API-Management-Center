@@ -1,5 +1,6 @@
 type RuntimeConfig = {
   defaultApiBase?: string;
+  enabledOAuthProviders?: string[];
 };
 
 declare global {
@@ -19,4 +20,15 @@ export const getRuntimeConfig = (): RuntimeConfig => {
 export const getDefaultApiBase = (): string => {
   const config = getRuntimeConfig();
   return typeof config.defaultApiBase === 'string' ? config.defaultApiBase.trim() : '';
+};
+
+export const getEnabledOAuthProviders = (): string[] => {
+  const config = getRuntimeConfig();
+  if (!Array.isArray(config.enabledOAuthProviders)) {
+    return [];
+  }
+
+  return config.enabledOAuthProviders.filter(
+    (provider): provider is string => typeof provider === 'string' && provider.trim().length > 0
+  );
 };

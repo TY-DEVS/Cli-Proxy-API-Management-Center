@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { useNotificationStore, useThemeStore } from '@/stores';
 import { oauthApi, type OAuthProvider, type IFlowCookieAuthResponse } from '@/services/api/oauth';
 import { vertexApi, type VertexImportResponse } from '@/services/api/vertex';
+import { getEnabledOAuthProviders } from '@/config/runtimeConfig';
 import { copyToClipboard } from '@/utils/clipboard';
 import styles from './OAuthPage.module.scss';
 import iconCodex from '@/assets/icons/codex.svg';
@@ -24,6 +25,7 @@ interface ProviderState {
   state?: string;
   status?: 'idle' | 'waiting' | 'success' | 'error';
   error?: string;
+  unsupported?: boolean;
   polling?: boolean;
   projectId?: string;
   projectIdError?: string;
@@ -72,6 +74,18 @@ function getErrorStatus(error: unknown): number | undefined {
   return typeof error.status === 'number' ? error.status : undefined;
 }
 
+function getUnsupportedProviderMessage(
+  provider: OAuthProvider,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string {
+  return t(`auth_login.${getProviderI18nPrefix(provider)}_oauth_unsupported_hint`, {
+    defaultValue:
+      provider === 'amazon'
+        ? 'Amazon OAuth is not supported by the connected CLI Proxy API build. Update the backend to a version that exposes this management route.'
+        : 'This OAuth provider is not supported by the connected CLI Proxy API build. Update the backend and try again.'
+  });
+}
+
 const PROVIDERS: { id: OAuthProvider; titleKey: string; hintKey: string; urlLabelKey: string; icon: string | { light: string; dark: string } }[] = [
   { id: 'codex', titleKey: 'auth_login.codex_oauth_title', hintKey: 'auth_login.codex_oauth_hint', urlLabelKey: 'auth_login.codex_oauth_url_label', icon: iconCodex },
   { id: 'anthropic', titleKey: 'auth_login.anthropic_oauth_title', hintKey: 'auth_login.anthropic_oauth_hint', urlLabelKey: 'auth_login.anthropic_oauth_url_label', icon: iconClaude },
@@ -82,7 +96,7 @@ const PROVIDERS: { id: OAuthProvider; titleKey: string; hintKey: string; urlLabe
   { id: 'amazon', titleKey: 'auth_login.amazon_oauth_title', hintKey: 'auth_login.amazon_oauth_hint', urlLabelKey: 'auth_login.amazon_oauth_url_label', icon: iconAmazon }
 ];
 
-const CALLBACK_SUPPORTED: OAuthProvider[] = ['codex', 'anthropic', 'antigravity', 'gemini-cli', 'amazon'];
+const CALLBACK_SUPPORTED: OAuthProvider[] = ['codex', 'anthropic', 'antigravity', 'gemini-cli'];
 const getProviderI18nPrefix = (provider: OAuthProvider) => provider.replace('-', '_');
 const getAuthKey = (provider: OAuthProvider, suffix: string) =>
   `auth_login.${getProviderI18nPrefix(provider)}_${suffix}`;
@@ -111,6 +125,11 @@ export function OAuthPage() {
   const { t } = useTranslation();
   const { showNotification } = useNotificationStore();
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme);
+  const enabledOAuthProviders = getEnabledOAuthProviders();
+  const visibleProviders =
+    enabledOAuthProviders.length > 0
+      ? PROVIDERS.filter((provider) => enabledOAuthProviders.includes(provider.id))
+      : PROVIDERS.filter((provider) => provider.id !== 'amazon');
   const [states, setStates] = useState<Record<OAuthProvider, ProviderState>>({} as Record<OAuthProvider, ProviderState>);
   const [iflowCookie, setIflowCookie] = useState<IFlowCookieState>({ cookie: '', loading: false });
   const [vertexState, setVertexState] = useState<VertexImportState>({
@@ -151,6 +170,8 @@ export function OAuthPage() {
           showNotification(t(getAuthKey(provider, 'oauth_status_success')), 'success');
           window.clearInterval(timer);
           delete timers.current[provider];
+        } else if (res.status === 'wait') {
+          updateProviderState(provider, { status: 'waiting', polling: true, error: undefined });
         } else if (res.status === 'error') {
           updateProviderState(provider, { status: 'error', error: res.error, polling: false });
           showNotification(
@@ -161,7 +182,18 @@ export function OAuthPage() {
           delete timers.current[provider];
         }
       } catch (err: unknown) {
-        updateProviderState(provider, { status: 'error', error: getErrorMessage(err), polling: false });
+        const message = getErrorMessage(err);
+        const normalizedMessage = message.toLowerCase();
+        if (
+          normalizedMessage.includes('authorization_pending') ||
+          normalizedMessage.includes('authorization pending') ||
+          normalizedMessage.includes('slow_down') ||
+          normalizedMessage.includes('slow down')
+        ) {
+          updateProviderState(provider, { status: 'waiting', polling: true, error: undefined });
+          return;
+        }
+        updateProviderState(provider, { status: 'error', error: message, polling: false });
         window.clearInterval(timer);
         delete timers.current[provider];
       }
@@ -170,6 +202,10 @@ export function OAuthPage() {
   };
 
   const startAuth = async (provider: OAuthProvider) => {
+    if (states[provider]?.unsupported) {
+      return;
+    }
+
     const geminiState = provider === 'gemini-cli' ? states[provider] : undefined;
     const rawProjectId = provider === 'gemini-cli' ? (geminiState?.projectId || '').trim() : '';
     const projectId = rawProjectId
@@ -206,15 +242,24 @@ export function OAuthPage() {
         startPolling(provider, resolvedState);
       }
     } catch (err: unknown) {
+      const status = getErrorStatus(err);
+      const unsupported = status === 404;
       const rawMessage = getErrorMessage(err);
       const message =
-        rawMessage.includes('Invalid OAuth response')
+        unsupported
+          ? getUnsupportedProviderMessage(provider, t)
+          : rawMessage.includes('Invalid OAuth response')
           ? t('auth_login.oauth_invalid_response_hint', {
               defaultValue:
                 'Invalid OAuth response from API. Please check API address points to CLI Proxy API backend (local dev usually http://localhost:8317).'
             })
           : rawMessage;
-      updateProviderState(provider, { status: 'error', error: message, polling: false });
+      updateProviderState(provider, {
+        status: 'error',
+        error: message,
+        polling: false,
+        unsupported
+      });
       showNotification(
         `${t(getAuthKey(provider, 'oauth_start_error'))}${message ? ` ${message}` : ''}`,
         'error'
@@ -378,9 +423,10 @@ export function OAuthPage() {
       <h1 className={styles.pageTitle}>{t('nav.oauth', { defaultValue: 'OAuth' })}</h1>
 
       <div className={styles.content}>
-        {PROVIDERS.map((provider) => {
+        {visibleProviders.map((provider) => {
           const state = states[provider.id] || {};
           const canSubmitCallback = CALLBACK_SUPPORTED.includes(provider.id) && Boolean(state.url);
+          const loginDisabled = Boolean(state.polling || state.unsupported);
           return (
             <div key={provider.id}>
               <Card
@@ -395,13 +441,20 @@ export function OAuthPage() {
                   </span>
                 }
                 extra={
-                  <Button onClick={() => startAuth(provider.id)} loading={state.polling}>
+                  <Button
+                    onClick={() => startAuth(provider.id)}
+                    loading={state.polling}
+                    disabled={loginDisabled}
+                  >
                     {t('common.login')}
                   </Button>
                 }
               >
                 <div className={styles.cardContent}>
                   <div className={styles.cardHint}>{t(provider.hintKey)}</div>
+                  {state.unsupported && state.error && (
+                    <div className="status-badge error">{state.error}</div>
+                  )}
                   {provider.id === 'gemini-cli' && (
                     <div className={styles.geminiProjectField}>
                       <Input
@@ -475,7 +528,7 @@ export function OAuthPage() {
                       )}
                     </div>
                   )}
-                  {state.status && state.status !== 'idle' && (
+                  {state.status && state.status !== 'idle' && !state.unsupported && (
                     <div className="status-badge">
                       {state.status === 'success'
                         ? t(getAuthKey(provider.id, 'oauth_status_success'))

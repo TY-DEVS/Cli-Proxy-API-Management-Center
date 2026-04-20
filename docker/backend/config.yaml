@@ -1,10 +1,8 @@
 host: 0.0.0.0
 port: 8317
 auth-dir: /CLIProxyAPI/auth
-
 remote-management:
   allow-remote: true
-  secret-key: change-me
+  secret-key: $2a$10$0yOhyJMMM7Nmnkjx6gy5kus0/99sBvKJPh0DKyXz/D.o3TD.LV87m
   disable-control-panel: true
-
 api-keys: []

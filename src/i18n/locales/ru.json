@@ -936,6 +936,7 @@
     "amazon_oauth_status_success": "Аутентификация успешна!",
     "amazon_oauth_status_error": "Ошибка аутентификации:",
     "amazon_oauth_start_error": "Не удалось запустить Amazon OAuth:",
+    "amazon_oauth_unsupported_hint": "Подключенная сборка CLI Proxy API не поддерживает Amazon OAuth. Обновите backend до версии, где есть этот management route.",
     "amazon_oauth_polling_error": "Не удалось проверить статус аутентификации:",
     "oauth_callback_label": "Callback URL",
     "oauth_callback_placeholder": "http://localhost:1455/auth/callback?code=...&state=...",
