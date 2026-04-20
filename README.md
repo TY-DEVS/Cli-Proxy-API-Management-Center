@@ -34,6 +34,10 @@ npm run dev
 
 Open `http://localhost:5173`, then connect to your CLI Proxy API backend instance.
 
+In Vite dev mode, runtime config injection from `app-config.js` is skipped intentionally; the UI falls back to auto-detecting the backend address from the browser location.
+
+If your local backend is running on `http://127.0.0.1:8317`, use the management key configured in [docker/backend/config.yaml](docker/backend/config.yaml). In this workspace sample, that default plaintext key is `change-me`.
+
 ### Option C: Build a single HTML file
 
 ```bash

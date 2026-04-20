@@ -129,7 +129,7 @@ export function OAuthPage() {
   const visibleProviders =
     enabledOAuthProviders.length > 0
       ? PROVIDERS.filter((provider) => enabledOAuthProviders.includes(provider.id))
-      : PROVIDERS.filter((provider) => provider.id !== 'amazon');
+      : PROVIDERS;
   const [states, setStates] = useState<Record<OAuthProvider, ProviderState>>({} as Record<OAuthProvider, ProviderState>);
   const [iflowCookie, setIflowCookie] = useState<IFlowCookieState>({ cookie: '', loading: false });
   const [vertexState, setVertexState] = useState<VertexImportState>({

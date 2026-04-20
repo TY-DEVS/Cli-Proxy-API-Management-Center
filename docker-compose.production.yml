@@ -1,0 +1,6 @@
+services:
+  cli-proxy-api:
+    build:
+      context: ${CLI_PROXY_BUILD_CONTEXT:-https://github.com/Aminetwiti/CLIProxyAPI-main.git#main}
+      dockerfile: Dockerfile
+    image: ${CLI_PROXY_LOCAL_IMAGE:-cli-proxy-api:production}

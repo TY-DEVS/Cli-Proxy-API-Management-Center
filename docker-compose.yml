@@ -1,7 +1,7 @@
 services:
   cli-proxy-api:
     build:
-      context: ${CLI_PROXY_BUILD_CONTEXT:-../CLIProxyAPI-main/CLIProxyAPI-main}
+      context: ${CLI_PROXY_BUILD_CONTEXT:-../CLIProxyAPI-main}
       dockerfile: Dockerfile
       args:
         VERSION: ${CLI_PROXY_VERSION:-dev}

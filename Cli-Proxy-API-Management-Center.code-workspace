@@ -1,0 +1,10 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../../.vscode/extensions/amazonwebservices.amazon-q-vscode-2.0.0"
+		}
+	]
+}
