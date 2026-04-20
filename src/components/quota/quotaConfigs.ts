@@ -1368,9 +1368,13 @@ const fetchAmazonQuota = async (
 
   const result = await apiCallApi.request({
     authIndex,
-    method: 'GET',
-    url: AMAZON_Q_USAGE_URL,
+    method: 'POST',
+    url: `${AMAZON_Q_USAGE_URL}?origin=IDE`,
     header: { ...AMAZON_Q_REQUEST_HEADERS },
+    data: JSON.stringify({
+      origin: 'IDE',
+      isEmailRequired: true,
+    }),
   });
 
   if (result.statusCode < 200 || result.statusCode >= 300) {

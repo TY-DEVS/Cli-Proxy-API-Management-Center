@@ -199,11 +199,11 @@ export const CODEX_REQUEST_HEADERS = {
 // Amazon Q Developer / CodeWhisperer runtime.
 // The real request is performed by CLIProxyAPI because it needs AWS SSO/OIDC cache access
 // and AWS bearer/SigV4-compatible handling discovered from the Amazon Q VS Code extension.
-export const AMAZON_Q_USAGE_URL = 'https://codewhisperer.us-east-1.amazonaws.com/usage-limits';
+export const AMAZON_Q_USAGE_URL = 'https://codewhisperer.us-east-1.amazonaws.com/';
 
 export const AMAZON_Q_REQUEST_HEADERS = {
   Authorization: 'Bearer $TOKEN$',
-  'Content-Type': 'application/json',
+  'Content-Type': 'application/x-amz-json-1.0',
   'X-Amz-Target': 'AmazonCodeWhispererService.GetUsageLimits',
 };
 

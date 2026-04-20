@@ -464,14 +464,26 @@ function buildAmazonModelQuotaRows(models: AmazonModelsPayload): AmazonQuotaRow[
 
 function resolveAmazonLimitItems(payload: AmazonUsagePayload): AmazonUsageLimitItem[] {
   const fromPayload =
-    payload.usageLimits ?? payload.usage_limits ?? payload.limits ?? payload.quotas ?? [];
+    payload.usageBreakdownList ??
+    payload.usage_breakdown_list ??
+    payload.usageLimits ??
+    payload.usage_limits ??
+    payload.limits ??
+    payload.quotas ??
+    [];
   if (Array.isArray(fromPayload)) {
     return fromPayload;
   }
 
   if (payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
     const nested = payload.data as Record<string, unknown>;
-    const nestedLimits = nested.usageLimits ?? nested.usage_limits ?? nested.limits ?? nested.quotas;
+    const nestedLimits =
+      nested.usageBreakdownList ??
+      nested.usage_breakdown_list ??
+      nested.usageLimits ??
+      nested.usage_limits ??
+      nested.limits ??
+      nested.quotas;
     if (Array.isArray(nestedLimits)) {
       return nestedLimits as AmazonUsageLimitItem[];
     }
@@ -560,6 +572,8 @@ export function buildAmazonQuotaRows(payload: AmazonUsagePayload): AmazonQuotaRo
     }
 
     const label =
+      (typeof raw.displayName === 'string' && raw.displayName.trim()) ||
+      (typeof raw.display_name === 'string' && raw.display_name.trim()) ||
       (typeof raw.name === 'string' && raw.name.trim()) ||
       (typeof raw.title === 'string' && raw.title.trim()) ||
       (typeof raw.scope === 'string' && raw.scope.trim()) ||

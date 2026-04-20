@@ -338,6 +338,8 @@ export interface AmazonUsagePayload {
   usage_limits?: AmazonUsageLimitItem[];
   limits?: AmazonUsageLimitItem[];
   quotas?: AmazonUsageLimitItem[];
+  usageBreakdownList?: AmazonUsageLimitItem[];
+  usage_breakdown_list?: AmazonUsageLimitItem[];
   models?: AmazonModelsPayload;
   data?: unknown;
 }
