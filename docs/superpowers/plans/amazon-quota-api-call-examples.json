@@ -24,6 +24,30 @@
       }
     },
     {
+      "name": "amazon-list-available-models-origin-ide-external-idp",
+      "request": {
+        "authIndex": "729497c744b80022",
+        "method": "GET",
+        "url": "https://elasticgumbyfrontendservice.us-east-1.amazonaws.com/ListAvailableModels?origin=IDE",
+        "header": {
+          "Authorization": "Bearer $TOKEN$",
+          "TokenType": "EXTERNAL_IDP"
+        }
+      }
+    },
+    {
+      "name": "amazon-list-available-models-origin-ide-optout-false",
+      "request": {
+        "authIndex": "729497c744b80022",
+        "method": "GET",
+        "url": "https://elasticgumbyfrontendservice.us-east-1.amazonaws.com/ListAvailableModels?origin=IDE",
+        "header": {
+          "Authorization": "Bearer $TOKEN$",
+          "x-amzn-codewhisperer-optout": "false"
+        }
+      }
+    },
+    {
       "name": "amazon-get-usage-limits",
       "request": {
         "authIndex": "729497c744b80022",
@@ -54,6 +78,18 @@
         "header": {
           "Authorization": "Bearer $TOKEN$",
           "TokenType": "EXTERNAL_IDP"
+        }
+      }
+    },
+    {
+      "name": "amazon-get-usage-limits-origin-ide-optout-false",
+      "request": {
+        "authIndex": "729497c744b80022",
+        "method": "GET",
+        "url": "https://elasticgumbyfrontendservice.us-east-1.amazonaws.com/getUsageLimits?origin=IDE",
+        "header": {
+          "Authorization": "Bearer $TOKEN$",
+          "x-amzn-codewhisperer-optout": "false"
         }
       }
     },

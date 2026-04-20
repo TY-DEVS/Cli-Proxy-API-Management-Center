@@ -42,7 +42,6 @@ import {
   CLAUDE_USAGE_WINDOW_KEYS,
   CODEX_USAGE_URL,
   CODEX_REQUEST_HEADERS,
-  AMAZON_Q_USAGE_URL,
   AMAZON_Q_ENDPOINT_HOST_TEMPLATE,
   AMAZON_Q_GET_USAGE_LIMITS_PATH,
   AMAZON_Q_LIST_AVAILABLE_MODELS_PATH,
@@ -1369,7 +1368,11 @@ const fetchAmazonQuota = async (
     throw new Error(t('amazon_quota.missing_auth_index'));
   }
 
-  const rawRegion = file.region ?? file['region'] ?? file.metadata?.region;
+  const metadata =
+    file.metadata && typeof file.metadata === 'object' && !Array.isArray(file.metadata)
+      ? (file.metadata as Record<string, unknown>)
+      : null;
+  const rawRegion = file.region ?? file['region'] ?? metadata?.region;
   const region =
     typeof rawRegion === 'string' && rawRegion.trim() ? rawRegion.trim() : 'us-east-1';
   const endpointBase = AMAZON_Q_ENDPOINT_HOST_TEMPLATE.replace('{region}', region);
@@ -1394,6 +1397,30 @@ const fetchAmazonQuota = async (
       },
     },
     {
+      label: 'list-available-models-origin-optout-false',
+      request: {
+        authIndex,
+        method: 'GET',
+        url: `${endpointBase}${AMAZON_Q_LIST_AVAILABLE_MODELS_PATH}?origin=IDE`,
+        header: {
+          ...AMAZON_Q_REQUEST_HEADERS,
+          'x-amzn-codewhisperer-optout': 'false',
+        },
+      },
+    },
+    {
+      label: 'list-available-models-origin-external-idp',
+      request: {
+        authIndex,
+        method: 'GET',
+        url: `${endpointBase}${AMAZON_Q_LIST_AVAILABLE_MODELS_PATH}?origin=IDE`,
+        header: {
+          ...AMAZON_Q_REQUEST_HEADERS,
+          TokenType: 'EXTERNAL_IDP',
+        },
+      },
+    },
+    {
       label: 'get-usage-limits',
       request: {
         authIndex,
@@ -1411,14 +1438,40 @@ const fetchAmazonQuota = async (
         header: { ...AMAZON_Q_REQUEST_HEADERS },
       },
     },
+    {
+      label: 'get-usage-limits-origin-optout-false',
+      request: {
+        authIndex,
+        method: 'GET',
+        url: `${endpointBase}${AMAZON_Q_GET_USAGE_LIMITS_PATH}?origin=IDE`,
+        header: {
+          ...AMAZON_Q_REQUEST_HEADERS,
+          'x-amzn-codewhisperer-optout': 'false',
+        },
+      },
+    },
+    {
+      label: 'get-usage-limits-origin-external-idp',
+      request: {
+        authIndex,
+        method: 'GET',
+        url: `${endpointBase}${AMAZON_Q_GET_USAGE_LIMITS_PATH}?origin=IDE`,
+        header: {
+          ...AMAZON_Q_REQUEST_HEADERS,
+          TokenType: 'EXTERNAL_IDP',
+        },
+      },
+    },
   ] as const;
 
+  const debugLines: string[] = [];
   let lastError = '';
   let lastStatus: number | undefined;
 
   for (const variant of requestVariants) {
     try {
       const result = await apiCallApi.request(variant.request);
+      debugLines.push(`${variant.label}: HTTP ${result.statusCode}`);
 
       if (result.statusCode < 200 || result.statusCode >= 300) {
         lastError = `[${variant.label}] ${getApiCallErrorMessage(result)}`;
@@ -1434,15 +1487,22 @@ const fetchAmazonQuota = async (
 
       const rows = buildAmazonQuotaRows(payload);
       if (rows.length > 0) {
+        rows[0] = {
+          ...rows[0],
+          resetHint: rows[0].resetHint,
+        };
+        (rows as AmazonQuotaRow[] & { __debug__?: string[] }).__debug__ = debugLines;
         return rows;
       }
 
       lastError = `[${variant.label}] ${t('amazon_quota.empty_data')}`;
+      debugLines.push(`${variant.label}: parsed but empty`);
     } catch (error: unknown) {
       lastError =
         error instanceof Error
           ? `[${variant.label}] ${error.message}`
           : `[${variant.label}] ${t('common.unknown_error')}`;
+      debugLines.push(lastError);
       const status = getStatusFromError(error);
       if (status) {
         lastStatus = status;
@@ -1466,7 +1526,7 @@ const renderAmazonItems = (
     return h('div', { className: styleMap.quotaMessage }, t('amazon_quota.empty_data'));
   }
 
-  return rows.map((row) => {
+  const rowNodes = rows.map((row) => {
     const fraction = row.remainingFraction;
     const limit = row.limit;
     const used = row.used;
@@ -1520,6 +1580,34 @@ const renderAmazonItems = (
       })
     );
   });
+
+  const debugLines = Array.isArray(quota.debug) ? quota.debug.filter(Boolean) : [];
+  if (debugLines.length === 0) {
+    return rowNodes;
+  }
+
+  return h(
+    React.Fragment,
+    null,
+    ...rowNodes,
+    h(
+      'div',
+      { className: styleMap.quotaWarning },
+      h('strong', null, 'Amazon quota debug:'),
+      h(
+        'div',
+        {
+          style: {
+            marginTop: '6px',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+          },
+        },
+        debugLines.join('\n')
+      )
+    )
+  );
 };
 
 export const AMAZON_CONFIG: QuotaConfig<AmazonQuotaState, AmazonQuotaRow[]> = {
@@ -1531,10 +1619,15 @@ export const AMAZON_CONFIG: QuotaConfig<AmazonQuotaState, AmazonQuotaRow[]> = {
   storeSelector: (state) => state.amazonQuota,
   storeSetter: 'setAmazonQuota',
   buildLoadingState: () => ({ status: 'loading', rows: [] }),
-  buildSuccessState: (rows) => ({ status: 'success', rows }),
+  buildSuccessState: (rows) => ({
+    status: 'success',
+    rows,
+    debug: (rows as AmazonQuotaRow[] & { __debug__?: string[] }).__debug__ ?? [],
+  }),
   buildErrorState: (message, status) => ({
     status: 'error',
     rows: [],
+    debug: [],
     error: message,
     errorStatus: status,
   }),

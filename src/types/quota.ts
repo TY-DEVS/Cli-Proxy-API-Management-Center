@@ -376,6 +376,7 @@ export interface AmazonQuotaRow {
 export interface AmazonQuotaState {
   status: 'idle' | 'loading' | 'success' | 'error';
   rows: AmazonQuotaRow[];
+  debug?: string[];
   error?: string;
   errorStatus?: number;
 }
